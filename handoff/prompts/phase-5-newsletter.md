@@ -1,4 +1,4 @@
-# Phase 6 · Newsletter
+# Phase 5 · Newsletter
 
 Public subscribe + admin subscribers + campaign builder + send.
 
@@ -77,8 +77,9 @@ microcopy from the design (e.g. *"check your inbox. it's on the way."*).
 ### 6.7 Campaign builder
 
 `app/admin/campaigns/page.tsx` — list with status filter.
-`app/admin/campaigns/new/page.tsx` — pick a published post → pre-fills subject
-+ preheader + body, redirects to `[id]`.
+`app/admin/campaigns/new/page.tsx` — pick a published MDX file (queried via
+Velite manifest, not the DB) → pre-fills subject + preheader + body snapshot,
+redirects to `[id]`.
 `app/admin/campaigns/[id]/page.tsx` — edit:
 
 - Subject input
@@ -96,7 +97,7 @@ iframe that simulates Gmail desktop and iOS Mail.
 
 `app/api/cron/send-campaigns/route.ts`:
 
-- Every 5 minutes via Vercel cron.
+- POST handler, auth via `Authorization: Bearer ${CRON_SECRET}`.
 - Query campaigns where `status="scheduled"` and `scheduledFor <= now()`.
 - For each: flip to `sending`, fetch active subscribers in segment, batch by 100,
   call Resend audience send or per-email loop (use the `bulk` Resend feature if
@@ -106,11 +107,13 @@ iframe that simulates Gmail desktop and iOS Mail.
 - On any per-batch failure: log, continue, mark overall as `sent` with the count
   that succeeded.
 
-Vercel cron addition to `vercel.json`:
+Scheduling — same pattern as phase 4's publish cron: GitHub Actions workflow
+runs every 5 minutes (`*/5 * * * *`) and POSTs the endpoint with `CRON_SECRET`.
+Document the workflow in a comment block at the top of the route file. The
+actual `.github/workflows/cron-send.yml` lands in phase 7 / deploy.
 
-```json
-{ "path": "/api/cron/send-campaigns", "schedule": "*/5 * * * *" }
-```
+Local testing: add a "send scheduled campaigns now" button on
+`/admin/campaigns` (owner-gated) that POSTs the endpoint with the secret.
 
 ### 6.9 Open/click tracking
 

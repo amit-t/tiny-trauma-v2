@@ -72,31 +72,41 @@ The design has already been reviewed and approved.
 
 ## Forbidden
 
-- No drop shadows (one exception: modals, already specified).
-- No emoji in product UI. (Source-comment emoji is fine.)
-- No "we" voice anywhere — it's a personal blog, "I" only, and only when speaking
-  as the writer.
-- No third typeface. Newsreader + IBM Plex Mono + Caveat. That's it.
+- No `ANTHROPIC_API_KEY` in the app, no Anthropic SDK, no server-side AI calls.
+  The app is content + email; AI lives in the local Claude Code skill.
+- No drop shadows (one exception: modals).
+- No emoji in product UI.
+- No "we" voice anywhere — it's a personal blog, "I" only.
+- No third typeface. Fraunces + IBM Plex Mono + Caveat.
 - No icon libraries for nav or CTAs. Type does the work.
 - No multi-tenant patterns. No "organizations", no roles, no permissions matrices.
-- No fake content during admin development. Use real placeholder essays from
-  `design/musings.html` so the visuals stay honest.
+- No fake content during admin development. Use the seeded MDX files from
+  `/content/` so the visuals stay honest.
 - No `prefers-color-scheme` defaults. Dark is canonical. Light is opt-in via toggle.
+- No in-app post editor / tiptap / autosave / revisions — writing happens in
+  the local skill, the deployed admin only views MDX, never edits it.
 
 ## Secrets
 
 `.env.local.example` lives at the repo root after phase 0. Fill it in via the
-Vercel dashboard, never commit `.env.local`. Required:
+DigitalOcean App Platform dashboard in production, never commit `.env.local`.
+Required:
 
 ```
-DATABASE_URL=...                # Neon Postgres
+DATABASE_URL=postgresql://tt:tt@localhost:5432/tinytrauma   # dev: docker compose
 BETTER_AUTH_SECRET=...          # generate via `openssl rand -base64 32`
 BETTER_AUTH_URL=http://localhost:3000
 RESEND_API_KEY=...
 RESEND_FROM=hi@tinytrauma.in    # verify domain in Resend first
-ANTHROPIC_API_KEY=...
+RESEND_WEBHOOK_SECRET=...       # from Resend webhook config
 OWNER_EMAIL=...                 # the email that gets owner access on signup
+CRON_SECRET=...                 # `openssl rand -base64 32`; auth for cron POSTs
 ```
+
+**There is no `ANTHROPIC_API_KEY`.** This app does not call Anthropic from
+the server. All AI happens locally in the `tiny-trauma-content` Claude Code
+skill, which uses the owner's Claude Code subscription. Do not introduce
+Anthropic SDK to the deployed app.
 
 ## When stuck
 

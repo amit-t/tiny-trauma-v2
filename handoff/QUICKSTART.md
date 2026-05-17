@@ -22,13 +22,15 @@ git push
 
 Sign up / get keys:
 
-- [Neon](https://neon.tech) — free Postgres. Create a project, copy the connection string.
-- [Resend](https://resend.com) — free email. Verify your sending domain
-  (`tinytrauma.in` if you have it; use `onboarding@resend.dev` for testing
-  otherwise).
-- [Anthropic Console](https://console.anthropic.com) — API key. Top up with $10
-  to start; the build itself will cost cents.
-- (Later) [Vercel](https://vercel.com) for deploy.
+- **[Docker Desktop](https://www.docker.com/products/docker-desktop)** —
+  for the local Postgres. Free.
+- **[Resend](https://resend.com)** — free email. Verify your sending domain
+  later in deploy phase.
+- (Later) **[DigitalOcean](https://www.digitalocean.com)** for deploy +
+  managed Postgres.
+
+**You do NOT need an Anthropic API key.** All AI in this project happens
+locally inside Claude Code (your existing subscription covers it).
 
 Have your `OWNER_EMAIL` ready — the email that gets owner access on first
 sign-in.
@@ -36,19 +38,13 @@ sign-in.
 ## 3. Install Claude Code
 
 ```bash
-# macOS
-brew install anthropic/claude-code/claude-code
-# or via npm
-npm install -g @anthropic-ai/claude-code
-```
+brew install anthropic/claude-code/claude-code   # macOS
+# or: npm install -g @anthropic-ai/claude-code
 
-Auth:
-
-```bash
 claude /login
 ```
 
-## 4. Kick off the agent
+## 4. Kick off the build
 
 From inside `tiny-trauma-v2/`:
 
@@ -65,26 +61,58 @@ Stop after each phase and ask me to verify before moving on.
 ```
 
 The agent will set up the project, install dependencies, write code,
-run dev server, and stop at the end of phase 0 (≈30 min). Verify it works
-(`pnpm dev`, open localhost:3000), then say "phase 0 done, start phase 1".
+run dev server, and stop at the end of phase 0 (~30 min). Verify it works
+(`pnpm db:up && pnpm dev`, open localhost:3000), then say "phase 0 done,
+start phase 1".
 
 ## 5. Pace
 
-Don't try to do all seven phases in one sitting. Suggested rhythm:
+Don't do all six phases in one sitting. Suggested rhythm:
 
-- **Evening 1**: phases 0, 1, 2 — by end you have a fully-styled static blog
-- **Evening 2**: phases 3, 4 — admin + editor + publish flow
-- **Evening 3**: phases 5, 6, 7 — AI, newsletter, cross-post, deploy
+- **Evening 1**: phases 0, 1, 2 — fully-styled public blog reading from MDX
+- **Evening 2**: phases 3, 4 — admin shell + MDX viewer
+- **Evening 3**: phases 5, 6 — newsletter + DigitalOcean deploy
 
-After phase 6, you can write your first real essay in the app, schedule it for
-the next Sunday, and have it actually go out by email when the day comes.
+After phase 6 you're live on `tinytrauma.in`.
 
-## When the agent gets stuck
+## 6. Install the writing skill
 
-- Open the relevant `handoff/design/*.html` file and show the agent.
-- Open `handoff/ARCHITECTURE.md` and point at the section it needs.
-- If it's a product decision (e.g. "should the chip color follow the tag or
-  the type?"), make the call yourself — don't let it guess.
+After phase 6, install the local content skill (lives in this bundle, not
+in the deployed app):
+
+```bash
+mkdir -p .claude/skills
+cp -R handoff/skills/tiny-trauma-content .claude/skills/
+git add .claude/skills && git commit -m "chore: install tiny-trauma-content skill"
+git push
+```
+
+Then open Claude Code in the repo and write your first essay:
+
+```
+> /skill tiny-trauma-content essay
+```
+
+It'll grill you for noticings, propose angles, draft, edit, and write an
+MDX file. You review, commit, push. DO redeploys. Essay is live.
+
+## 7. Refine the skill (later)
+
+The skill ships as v0. After 1–2 essays, you'll know what doesn't work.
+In Claude Code:
+
+```
+> I want to refine the tiny-trauma-content skill. Ask me what felt off in
+  the last essay I wrote with it.
+```
+
+The agent walks you through revisions, commits the diff.
+
+## When the agent gets stuck during the build
+
+- Point at the relevant `handoff/design/*.html` file.
+- Point at `handoff/ARCHITECTURE.md` for data flows.
+- If it's a product decision, make the call. Don't let it guess.
 
 ## When you want to change scope
 
@@ -92,5 +120,5 @@ Edit the prompt file before starting that phase. The prompt is the contract.
 
 ## When something feels off in voice
 
-It probably is. Run it past the rules in `handoff/CLAUDE.md` "Voice". The most
-common drift: the agent adds polite "we" phrasing or sneaks in emoji. Push back.
+It probably is. Push back. Most common drift: polite "we" phrasing or sneaky
+emoji. Check against `handoff/CLAUDE.md` "Voice" section.

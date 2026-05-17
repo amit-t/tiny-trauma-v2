@@ -1,37 +1,53 @@
 # ARCHITECTURE.md — Tiny Trauma v2
 
-## High-level
+## Two pieces, clearly separated
 
 ```
-                    ┌─────────────────────────────────┐
-                    │   Public site (RSC, edge cache) │
-                    │   /  /musings  /shorts  /about  │
-                    │   /newsletter  /[type]/[slug]   │
-                    └─────────────┬───────────────────┘
-                                  │ reads
-                                  ▼
-                    ┌─────────────────────────────────┐
-                    │   Postgres (Neon)               │
-                    │   posts · subscribers ·         │
-                    │   campaigns · brainstorms       │
-                    └─────────────▲───────────────────┘
-                                  │ writes
-                                  │
-                    ┌─────────────┴───────────────────┐
-                    │   Admin (/admin/*, auth-gated)  │
-                    │   editor, drafts, campaigns,    │
-                    │   subscribers, ai workshop      │
-                    └─────────────┬───────────────────┘
-                                  │ calls
-                ┌─────────────────┼──────────────────┐
-                ▼                 ▼                  ▼
-         ┌────────────┐    ┌────────────┐     ┌────────────┐
-         │  Anthropic │    │   Resend   │     │  Plausible │
-         │  (brain-   │    │  (email)   │     │  (stats,   │
-         │   storm,   │    │            │     │   phase 5) │
-         │   edits)   │    │            │     │            │
-         └────────────┘    └────────────┘     └────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│  LOCAL ONLY — your laptop, inside Claude Code                       │
+│                                                                      │
+│   ┌─────────────────────────┐                                       │
+│   │ tiny-trauma-content     │  brainstorms, drafts, edits           │
+│   │ skill (Claude Code)     │  (uses your Claude Code subscription) │
+│   └────────────┬────────────┘                                       │
+│                │ outputs                                             │
+│                ▼                                                     │
+│   ┌─────────────────────────┐                                       │
+│   │ content/musings/*.mdx   │  ← committed to git                   │
+│   │ content/shorts/*.mdx    │                                       │
+│   └────────────┬────────────┘                                       │
+└────────────────┼────────────────────────────────────────────────────┘
+                 │ git push
+                 ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  DEPLOYED — DigitalOcean                                            │
+│                                                                      │
+│   ┌─────────────────────────────────┐                               │
+│   │   Public site (Next.js, RSC)    │  reads MDX from /content      │
+│   │   /  /musings  /shorts  /about  │  rebuild on git push          │
+│   │   /newsletter  /[type]/[slug]   │                               │
+│   └────────────┬────────────────────┘                               │
+│                │ reads/writes                                        │
+│                ▼                                                     │
+│   ┌─────────────────────────────────┐                               │
+│   │   DO Managed Postgres           │  subscribers · campaigns ·    │
+│   │                                 │  subscribe_events             │
+│   └─────────────────────────────────┘                               │
+│                ▲                                                     │
+│                │ uses                                                │
+│   ┌────────────┴────────────────────┐                               │
+│   │   /admin (Better Auth, owner)   │  manage subscribers,          │
+│   │                                 │  build & schedule campaigns   │
+│   └────────────┬────────────────────┘                               │
+│                │ sends via                                           │
+│                ▼                                                     │
+│         ┌─────────────┐                                              │
+│         │   Resend    │                                              │
+│         └─────────────┘                                              │
+└──────────────────────────────────────────────────────────────────────┘
 ```
+
+**No Anthropic API calls from the deployed server.** All AI is local.
 
 ## Routes
 
@@ -52,22 +68,19 @@
 | `/api/subscribe`      | POST endpoint (email + tier)            |
 | `/api/unsubscribe`    | GET with token from email footer        |
 | `/api/webhooks/resend`| Bounce/complaint handling               |
+| `/api/cron/send-campaigns` | POST, bearer-token-auth, hourly via GitHub Actions |
 
 ### Admin (`/admin/*`, auth-gated; redirects to login if not owner)
 
 | Path                          | What                                  |
 |-------------------------------|---------------------------------------|
-| `/admin`                      | Dashboard: counts, last actions       |
-| `/admin/posts`                | All posts, status filter              |
-| `/admin/posts/new`            | Create — pick type (musing/short)     |
-| `/admin/posts/[id]`           | Edit — tiptap editor + side panel     |
-| `/admin/posts/[id]/preview`   | Server-render preview in real layout  |
-| `/admin/brainstorm`           | AI workshop — long form chat-with-claude attached to a draft |
+| `/admin`                      | Dashboard: counts, last sent          |
+| `/admin/posts`                | Read-only list of MDX files w/ status (a window into `/content`, not an editor) |
+| `/admin/posts/[slug]`         | MDX file viewer — frontmatter on right, rendered body on left, "open in editor" links to your local file (`vscode://file/...`) |
 | `/admin/campaigns`            | Newsletter campaigns list             |
-| `/admin/campaigns/new`        | Build a campaign from a post          |
+| `/admin/campaigns/new`        | Build a campaign from a published MDX file |
 | `/admin/campaigns/[id]`       | Edit + schedule + preview             |
 | `/admin/subscribers`          | Subscriber list, search, export       |
-| `/admin/cross-post`           | Generate twitter/linkedin from a post |
 | `/admin/settings`             | Site-level settings, API keys check   |
 
 ### Auth
@@ -77,45 +90,33 @@
 | `/sign-in`            | Email magic-link sign-in                |
 | `/api/auth/[...all]`  | Better Auth handler                     |
 
-## Data model (Drizzle schema sketch)
+## Content model — MDX files
+
+**Posts are not in the database.** They live in `/content/musings/*.mdx` and
+`/content/shorts/*.mdx`. Full schema in `handoff/CONTENT-MODEL.md`.
+
+The Next.js app uses **Velite** (or **MDX + a small custom loader**) at build
+time to:
+1. Read every `.mdx` file under `/content/`
+2. Validate frontmatter against a Zod schema
+3. Generate a typed manifest (`.velite/posts.json`) the app imports
+4. Hot-reload in dev when files change
+
+On `git push`, DO App Platform rebuilds; new MDX files appear automatically.
+
+## Data model — Postgres (Drizzle schema)
+
+Only three tables. Posts are NOT here.
 
 ```ts
 // db/schema.ts
-import { pgTable, text, timestamp, varchar, integer, jsonb, boolean, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, varchar, integer, boolean, uuid } from "drizzle-orm/pg-core";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: varchar("email", { length: 255 }).notNull().unique(),
   name: varchar("name", { length: 120 }),
-  isOwner: boolean("is_owner").notNull().default(false), // exactly one true row
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-export const posts = pgTable("posts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  type: text("type", { enum: ["musing", "short"] }).notNull(),
-  slug: varchar("slug", { length: 200 }).notNull().unique(),
-  title: text("title").notNull(),         // can contain inline <em>
-  dek: text("dek"),                       // standfirst
-  body: text("body").notNull(),           // markdown
-  tags: text("tags").array().notNull().default([]),
-  number: integer("number"),              // monotonic per-type display number
-  status: text("status", { enum: ["draft", "scheduled", "published", "archived"] }).notNull().default("draft"),
-  publishedAt: timestamp("published_at"),
-  scheduledFor: timestamp("scheduled_for"),
-  featured: boolean("featured").notNull().default(false),
-  heroImage: text("hero_image"),          // optional URL/path
-  readingTimeSeconds: integer("reading_time_seconds"),
-  wordCount: integer("word_count"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const postRevisions = pgTable("post_revisions", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  postId: uuid("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
-  body: text("body").notNull(),
-  reason: text("reason"),                 // "manual save", "ai edit accepted", etc.
+  isOwner: boolean("is_owner").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -126,7 +127,7 @@ export const subscribers = pgTable("subscribers", {
   tier: text("tier", { enum: ["weekly", "monthly", "both"] }).notNull().default("weekly"),
   status: text("status", { enum: ["pending", "active", "unsubscribed", "bounced"] }).notNull().default("pending"),
   unsubscribeToken: varchar("unsubscribe_token", { length: 64 }).notNull(),
-  source: text("source"),                 // "home", "newsletter-page", "footer", "post"
+  source: text("source"),
   subscribedAt: timestamp("subscribed_at").notNull().defaultNow(),
   confirmedAt: timestamp("confirmed_at"),
   unsubscribedAt: timestamp("unsubscribed_at"),
@@ -134,10 +135,12 @@ export const subscribers = pgTable("subscribers", {
 
 export const campaigns = pgTable("campaigns", {
   id: uuid("id").primaryKey().defaultRandom(),
-  postId: uuid("post_id").references(() => posts.id, { onDelete: "set null" }),
+  postSlug: varchar("post_slug", { length: 200 }),   // links to an MDX file
+  postType: text("post_type", { enum: ["musing", "short"] }),
   subject: text("subject").notNull(),
   preheader: text("preheader"),
-  body: text("body").notNull(),           // markdown — usually mirrors post body
+  personalNote: text("personal_note"),
+  bodySnapshot: text("body_snapshot").notNull(),   // copy of MDX body at the moment of campaign creation; preserved even if post is later edited
   segment: text("segment", { enum: ["weekly", "monthly", "both", "all"] }).notNull().default("weekly"),
   status: text("status", { enum: ["draft", "scheduled", "sending", "sent", "failed"] }).notNull().default("draft"),
   scheduledFor: timestamp("scheduled_for"),
@@ -145,24 +148,6 @@ export const campaigns = pgTable("campaigns", {
   sentCount: integer("sent_count").notNull().default(0),
   openCount: integer("open_count").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-export const brainstorms = pgTable("brainstorms", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  postId: uuid("post_id").references(() => posts.id, { onDelete: "cascade" }),
-  title: text("title"),                   // user-titled or auto-generated
-  messages: jsonb("messages").$type<Array<{role:"user"|"assistant", content:string, ts:string}>>().notNull().default([]),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
-
-export const crossPosts = pgTable("cross_posts", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  postId: uuid("post_id").notNull().references(() => posts.id, { onDelete: "cascade" }),
-  platform: text("platform", { enum: ["twitter", "linkedin", "instagram-caption", "bluesky"] }).notNull(),
-  body: text("body").notNull(),
-  generatedAt: timestamp("generated_at").notNull().defaultNow(),
-  status: text("status", { enum: ["draft", "copied", "posted"] }).notNull().default("draft"),
 });
 
 export const subscribeEvents = pgTable("subscribe_events", {
@@ -176,85 +161,71 @@ export const subscribeEvents = pgTable("subscribe_events", {
 
 ## Key flows
 
-### Publish a post
+### Publish an essay (the writing flow)
 
-1. Owner drafts in `/admin/posts/[id]`. Autosave every 4s to `posts.body`,
-   snapshot to `post_revisions` on big diffs (>200 chars) or every 5 minutes.
-2. Owner clicks "schedule" → modal with date/time defaulting to next Sunday 9am IST.
-3. Status flips to `scheduled`. A Vercel cron at `/api/cron/publish` runs hourly,
-   flips eligible scheduled rows to `published` and sets `publishedAt = now()`.
-4. Optionally chain: "also create a newsletter campaign from this post."
-   Creates a `campaigns` row in draft, mirrors body, owner reviews + schedules send.
-5. On publish, invalidate ISR paths: `/`, `/musings` (or `/shorts`), `/musings/[slug]`,
+1. Owner invokes `tiny-trauma-content` skill in Claude Code locally.
+2. Skill runs a grill-me session: theme, what they noticed this week, tone,
+   length. Drafts the essay in voice. Edits with the user.
+3. Skill writes `content/musings/<slug>.mdx` with full frontmatter.
+4. Owner reviews the file (in editor), tweaks if needed.
+5. `git add content/musings/<slug>.mdx && git commit -m "essay: <title>" && git push`
+6. DO App Platform autodeploys (~2 min). New essay appears on `/musings/<slug>`,
    `/feed.xml`, `/sitemap.xml`.
+
+### Send a campaign
+
+1. Admin opens `/admin/campaigns/new`, picks a published MDX file.
+2. Server reads the MDX, snapshots body into `campaigns.bodySnapshot`,
+   pre-fills subject (title without italics), preheader (dek).
+3. Owner edits subject/preheader, adds an optional personal note.
+4. Preview renders live as a real email (react-email iframe simulation).
+5. "Send test to me" → sends to owner only.
+6. "Schedule" → set `scheduledFor`. GitHub Actions cron hits
+   `/api/cron/send-campaigns` hourly, picks up due campaigns, batches via
+   Resend, records `subscribe_events` rows.
 
 ### Subscribe (public)
 
 1. POST `/api/subscribe` with `{ email, firstName?, tier, source }`.
-2. Server: insert row with `status="pending"`, generate `unsubscribeToken`.
-3. Send double-opt-in email via Resend (template: `confirm-subscription.tsx`).
-4. Link in email: `/api/subscribe/confirm?token=...` → flip `status="active"`.
-5. Send welcome email — short, in-voice, links to top 3 essays.
+2. Insert row with `status="pending"`, generate `unsubscribeToken`.
+3. Send double-opt-in email via Resend.
+4. Confirm link: `/api/subscribe/confirm?token=...` → `status="active"`.
+5. Welcome email — short, in-voice, links to top 3 essays (read from MDX).
 
-### Send a campaign
+## Cron jobs (GitHub Actions)
 
-1. Admin builds in `/admin/campaigns/[id]`. Preview = live render in
-   `react-email` component using campaign body.
-2. "Send test to me" → sends to owner only.
-3. "Schedule" → set `scheduledFor`. Cron `/api/cron/send-campaigns` runs every 5min,
-   picks up due campaigns, marks `status="sending"`, batches via Resend audience send
-   (or per-subscriber loop with batching of 100), records `subscribe_events` rows.
-4. Status flips to `sent` when done. Subject + first paragraph appear on
-   `/newsletter` past-letters list within minutes (ISR revalidate).
+DO App Platform has no native cron. We use GitHub Actions scheduled workflows
+that `curl` cron endpoints with a bearer token.
 
-### AI brainstorm
+- `cron-send-campaigns` — hourly. Hits `/api/cron/send-campaigns`.
+- No `cron-publish` needed (publishing is `git push`, not a scheduled job).
 
-1. `/admin/brainstorm` opens a chat pane. Optional: attached to a draft (right
-   side shows the draft, left side is chat).
-2. Messages stream from Anthropic API via a server action that returns a stream.
-   System prompt is in `lib/ai/system-prompt.ts` — version-controlled, in-voice
-   ("You are helping Amit, the writer of Tiny Trauma. Match his tone: dry, slightly
-   literary, lowercase-first, italics for emphasis. Never suggest emoji.").
-3. Useful presets: "outline this", "tighten this paragraph", "give me three
-   alternative titles", "what's the third theory I'm missing", "find the line
-   that's doing the most work".
-4. Output can be inserted into the draft body via a "drop into draft" button.
-
-### AI editing (inline in the editor)
-
-1. Select text in TipTap, popover appears with quick actions: tighten, expand,
-   rewrite-in-voice, fix-flow, suggest-italics.
-2. Server action calls Claude Haiku for speed.
-3. Diff view: original vs suggestion, accept/reject. On accept, replaces selection
-   and snapshots a revision.
-
-### Cross-post
-
-1. From a published post detail in admin, "Generate cross-posts" → spins three
-   variants per platform (twitter thread, linkedin post, instagram caption).
-2. Server action calls Claude with platform-specific prompts. Stores in `cross_posts`.
-3. Owner reviews, edits, clicks "copy to clipboard". (No direct posting in v1 —
-   the API keys / oauth flows aren't worth the build effort yet.)
+YAML in `handoff/DEPLOY.md`.
 
 ## Caching & revalidation
 
-- All public list/detail routes use `export const revalidate = 3600` (1 hour) + on-publish `revalidatePath` to invalidate immediately.
+- All public list/detail routes statically generated at build time from MDX.
+- On `git push` → new build → fresh static pages.
 - Admin routes are `force-dynamic`.
-- Static assets (fonts) cached aggressively at the edge.
-- Images via `next/image`; placeholder striped panels for posts without hero images.
+- Static assets (fonts) cached aggressively.
+- Next.js standalone output (`next.config.mjs` → `output: "standalone"`) for
+  DO App Platform.
 
 ## Environments
 
-- **Local**: `pnpm dev`, local Neon branch or Docker postgres.
-- **Preview**: every PR gets a Vercel preview with its own Neon branch.
-- **Production**: main branch → tinytrauma.in.
+- **Local**: `pnpm dev` against a local Postgres in **Docker**. MDX hot-reloads
+  on file save.
+- **Production**: **DigitalOcean App Platform** deploying from `main` on every
+  push. **DigitalOcean Managed Postgres** for the DB. Domain `tinytrauma.in`
+  via DO Domains; HTTPS via Let's Encrypt (automatic).
 
 ## Out of scope for v1
 
-- Multi-author / teams
+- Multi-author / teams / roles
 - Comments (replies are by email, on purpose)
 - Search (≤ 100 posts; year-grouped list is enough)
-- Social oauth posting (cross-post generates copy, user pastes)
+- In-app AI (use the local skill instead)
+- Direct social posting (the skill can generate cross-post copy locally; you paste)
 - Paid subscriptions / Stripe
 - Mobile app
 - i18n
