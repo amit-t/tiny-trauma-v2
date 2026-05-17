@@ -41,3 +41,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local-only file-backed stores (auth sqlite in dev, etc.)
+/.data/
