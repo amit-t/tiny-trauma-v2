@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteShell } from "@/components/layout/site-shell";
-import { findShort, shorts } from "@/lib/sample-data";
-import { renderInline, renderProse } from "@/lib/render-prose";
-import { formatLongDate, padNum, stripMarkers } from "@/lib/format";
+import { findShort, getAllShorts } from "@/lib/posts";
+import { renderInline } from "@/lib/render-prose";
+import { padNum, stripMarkers } from "@/lib/format";
 
 import type { Metadata } from "next";
 
 export async function generateStaticParams() {
-  return shorts.map((s) => ({ slug: s.slug }));
+  return getAllShorts().map((s) => ({ slug: s.slug }));
 }
 
 export async function generateMetadata({
@@ -26,7 +26,7 @@ export async function generateMetadata({
       title: stripMarkers(s.title),
       description: stripMarkers(s.dek),
       type: "article",
-      publishedTime: s.publishedAt.toISOString(),
+      publishedTime: s.publishedAt,
     },
   };
 }
@@ -39,10 +39,9 @@ export default async function ShortPage({
   const { slug } = await params;
   const s = findShort(slug);
   if (!s) notFound();
+  if (s.status === "draft" && process.env.NODE_ENV === "production") notFound();
 
-  const sorted = [...shorts].sort(
-    (a, b) => b.publishedAt.getTime() - a.publishedAt.getTime(),
-  );
+  const sorted = getAllShorts();
   const idx = sorted.findIndex((x) => x.slug === s.slug);
   const prev = sorted[idx + 1];
 
@@ -52,6 +51,11 @@ export default async function ShortPage({
         <div className="kicker">
           <span>● short fiction</span>
           <span className="num">№ {padNum(s.number)}</span>
+          {s.status === "draft" && (
+            <span className="chip b" style={{ marginLeft: 8 }}>
+              draft
+            </span>
+          )}
         </div>
         <h1>{renderInline(s.title)}</h1>
         <div className="byline">
@@ -68,7 +72,7 @@ export default async function ShortPage({
         <span className="corner">↘</span>
       </div>
 
-      <section className="short-body">{renderProse(s.body, "short")}</section>
+      <section className="short-body" dangerouslySetInnerHTML={{ __html: s.body }} />
 
       <div className="afterthought">
         <div className="label">a small afterthought, from the author:</div>
@@ -106,4 +110,10 @@ export default async function ShortPage({
       </nav>
     </SiteShell>
   );
+}
+
+function formatLongDate(iso: string): string {
+  return new Date(iso)
+    .toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })
+    .toLowerCase();
 }

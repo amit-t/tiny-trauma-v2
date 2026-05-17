@@ -1,8 +1,10 @@
 export type PostType = "musing" | "short";
 
+export type ChipTint = "lavender" | "sage" | "butter" | "peach" | "slate";
+
 export type ChipTag = {
   label: string;
-  tint: "lavender" | "sage" | "butter" | "peach" | "slate";
+  tint: ChipTint;
 };
 
 export type CardTint = "musing" | "short" | "bangal" | "phones" | "grief";

@@ -44,3 +44,7 @@ next-env.d.ts
 
 # local-only file-backed stores (auth sqlite in dev, etc.)
 /.data/
+
+# velite build output + bundled static assets
+/.velite/
+/public/static/

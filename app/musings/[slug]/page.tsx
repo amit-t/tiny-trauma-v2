@@ -3,14 +3,14 @@ import { notFound } from "next/navigation";
 import { Chip } from "@/components/ui/chip";
 import { Marginalia } from "@/components/ui/marginalia";
 import { SiteShell } from "@/components/layout/site-shell";
-import { findMusing, musings, shorts } from "@/lib/sample-data";
-import { renderInline, renderProse } from "@/lib/render-prose";
-import { formatLongDate, padNum, stripMarkers } from "@/lib/format";
+import { findMusing, getAllMusings, getPublishedShorts, tagToTint } from "@/lib/posts";
+import { renderInline } from "@/lib/render-prose";
+import { padNum, stripMarkers } from "@/lib/format";
 
 import type { Metadata } from "next";
 
 export async function generateStaticParams() {
-  return musings.map((m) => ({ slug: m.slug }));
+  return getAllMusings().map((m) => ({ slug: m.slug }));
 }
 
 export async function generateMetadata({
@@ -28,7 +28,7 @@ export async function generateMetadata({
       title: stripMarkers(m.title),
       description: stripMarkers(m.dek),
       type: "article",
-      publishedTime: m.publishedAt.toISOString(),
+      publishedTime: m.publishedAt,
     },
   };
 }
@@ -41,13 +41,12 @@ export default async function MusingPage({
   const { slug } = await params;
   const m = findMusing(slug);
   if (!m) notFound();
+  if (m.status === "draft" && process.env.NODE_ENV === "production") notFound();
 
-  // Prev / next in publication order (newest first in array → prev = next in array)
-  const sorted = [...musings].sort(
-    (a, b) => b.publishedAt.getTime() - a.publishedAt.getTime(),
-  );
+  const sorted = getAllMusings();
   const idx = sorted.findIndex((x) => x.slug === m.slug);
   const prev = sorted[idx + 1];
+  const shorts = getPublishedShorts();
   const nextShort = shorts.find((s) => s.featured) ?? shorts[0];
 
   return (
@@ -62,9 +61,10 @@ export default async function MusingPage({
               label: "filed under",
               value: (
                 <span style={{ display: "inline-flex", gap: 6, flexWrap: "wrap" }}>
+                  <Chip tint="lavender">musing</Chip>
                   {m.tags.map((t) => (
-                    <Chip key={t.label} tint={t.tint}>
-                      {t.label}
+                    <Chip key={t} tint={tagToTint(t)}>
+                      {t}
                     </Chip>
                   ))}
                 </span>
@@ -79,6 +79,11 @@ export default async function MusingPage({
           <header className="article-head">
             <div className="kicker">
               <span>● essay · musing</span>
+              {m.status === "draft" && (
+                <span className="chip b" style={{ marginLeft: 8 }}>
+                  draft
+                </span>
+              )}
             </div>
             <h1>{renderInline(m.title)}</h1>
             <p className="standfirst">{renderInline(m.dek)}</p>
@@ -93,7 +98,9 @@ export default async function MusingPage({
             <span className="ph">illustration · 16:9</span>
           </div>
 
-          <section className="prose">{renderProse(m.body, "musing")}</section>
+          <section className="prose" dangerouslySetInnerHTML={{ __html: m.body }} />
+
+          <div className="end-mark">— end.</div>
 
           <div className="share">
             <span className="label">tell someone:</span>
@@ -136,4 +143,10 @@ export default async function MusingPage({
       </article>
     </SiteShell>
   );
+}
+
+function formatLongDate(iso: string): string {
+  return new Date(iso)
+    .toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })
+    .toLowerCase();
 }

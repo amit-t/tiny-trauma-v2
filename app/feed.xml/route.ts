@@ -1,4 +1,4 @@
-import { allPosts } from "@/lib/sample-data";
+import { getPublishedForFeeds } from "@/lib/posts";
 import { stripMarkers } from "@/lib/format";
 
 const SITE = "https://tinytrauma.in";
@@ -7,7 +7,7 @@ const DESCRIPTION =
   "A personal blog about the small daily friction between who you are and everything around you. Honest, slightly literary, sometimes funny, occasionally devastating, never a wellness tip.";
 
 export async function GET() {
-  const posts = allPosts();
+  const posts = getPublishedForFeeds();
   const items = posts
     .map((p) => {
       const path = p.type === "musing" ? "musings" : "shorts";
@@ -20,7 +20,7 @@ export async function GET() {
       <guid isPermaLink="true">${url}</guid>
       <description>${dek}</description>
       <category>${p.type}</category>
-      <pubDate>${p.publishedAt.toUTCString()}</pubDate>
+      <pubDate>${new Date(p.publishedAt).toUTCString()}</pubDate>
     </item>`;
     })
     .join("\n");

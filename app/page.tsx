@@ -2,11 +2,17 @@ import Link from "next/link";
 import { ArtSlot } from "@/components/ui/art-slot";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
+import { DraftPill } from "@/components/ui/draft-pill";
 import { FilterPill } from "@/components/ui/filter-pill";
 import { HandInline } from "@/components/ui/hand-inline";
 import { Input } from "@/components/ui/input";
 import { SiteShell } from "@/components/layout/site-shell";
-import { musings, shorts } from "@/lib/sample-data";
+import {
+  cardTintFromHero,
+  getPublishedMusings,
+  getPublishedShorts,
+  tagToTint,
+} from "@/lib/posts";
 import { renderInline } from "@/lib/render-prose";
 
 const FILTERS: { label: string; count: number; active?: boolean }[] = [
@@ -19,8 +25,11 @@ const FILTERS: { label: string; count: number; active?: boolean }[] = [
 ];
 
 export default function Home() {
-  const recent = musings.slice(0, 4);
-  const featured = shorts.find((s) => s.featured) ?? shorts[0];
+  const allMusings = getPublishedMusings();
+  const allShorts = getPublishedShorts();
+  const recent = allMusings.slice(0, 4);
+  const featured = allShorts.find((s) => s.featured) ?? allShorts[0];
+  const lastPub = allMusings[0];
 
   return (
     <SiteShell activeHref="/">
@@ -28,7 +37,8 @@ export default function Home() {
         <div className="kicker">
           <span className="pulse" aria-hidden />
           <span>
-            last essay — may 12, 2026 <em>· four days ago</em>
+            last essay — {formatLongDate(lastPub.publishedAt)}{" "}
+            <em>· {timeAgo(lastPub.publishedAt)}</em>
           </span>
         </div>
         <h1>
@@ -41,9 +51,9 @@ export default function Home() {
           <Link href="/newsletter">subscribe</Link>, if that sounds right.
         </p>
         <div className="meta-row">
-          <span>{musings.length} essays</span>
+          <span>{allMusings.length} essays</span>
           <span className="sep">·</span>
-          <span>{shorts.length} short fictions</span>
+          <span>{allShorts.length} short fictions</span>
           <span className="sep">·</span>
           <span>1,240 quiet readers</span>
         </div>
@@ -77,16 +87,18 @@ export default function Home() {
 
         <div className="grid">
           {recent.map((m) => (
-            <article key={m.slug} className={`card t-${m.cardTint ?? "musing"}`}>
+            <article key={m.slug} className={`card t-${cardTintFromHero(m.heroTint)}`}>
               <div className="art-slot">
                 <span className="ph">illustration · 5:4</span>
               </div>
               <div className="chips">
+                <Chip tint="lavender">musing</Chip>
                 {m.tags.map((t) => (
-                  <Chip key={t.label} tint={t.tint}>
-                    {t.label}
+                  <Chip key={t} tint={tagToTint(t)}>
+                    {t}
                   </Chip>
                 ))}
+                {m.status === "draft" && <DraftPill />}
               </div>
               <h3>
                 <Link href={`/musings/${m.slug}`}>{renderInline(m.title)}</Link>
@@ -147,10 +159,29 @@ export default function Home() {
   );
 }
 
-function formatShortDate(d: Date): string {
-  return d
+function formatShortDate(iso: string): string {
+  return new Date(iso)
     .toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })
     .toLowerCase();
+}
+
+function formatLongDate(iso: string): string {
+  return new Date(iso)
+    .toLocaleDateString("en-US", { month: "long", day: "2-digit", year: "numeric" })
+    .toLowerCase();
+}
+
+function timeAgo(iso: string): string {
+  const days = Math.max(
+    0,
+    Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000),
+  );
+  if (days === 0) return "today";
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days} days ago`;
+  if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+  if (days < 365) return `${Math.floor(days / 30)} months ago`;
+  return `${Math.floor(days / 365)} years ago`;
 }
 
 function plain(s: string): string {

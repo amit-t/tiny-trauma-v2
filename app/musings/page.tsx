@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Chip } from "@/components/ui/chip";
+import { DraftPill } from "@/components/ui/draft-pill";
 import { FilterPill } from "@/components/ui/filter-pill";
 import { HandInline } from "@/components/ui/hand-inline";
 import { SiteShell } from "@/components/layout/site-shell";
-import { musings } from "@/lib/sample-data";
+import { getPublishedMusings, tagToTint } from "@/lib/posts";
 import { renderInline } from "@/lib/render-prose";
-import { formatMonthDay, padNum, stripMarkers } from "@/lib/format";
+import { padNum, stripMarkers } from "@/lib/format";
 
 import type { Metadata } from "next";
 
@@ -27,17 +28,23 @@ const FILTERS = [
 ];
 
 export default function MusingsPage() {
-  const pick = musings.find((m) => m.featured) ?? musings[0];
-  const rest = musings.filter((m) => m.slug !== pick.slug);
+  const all = getPublishedMusings();
+  const pick = all.find((m) => m.featured) ?? all[0];
+  const rest = all.filter((m) => m.slug !== pick.slug);
 
-  const y2026 = rest.filter((m) => m.publishedAt.getFullYear() === 2026);
-  const y2025 = rest.filter((m) => m.publishedAt.getFullYear() === 2025);
+  const buckets = new Map<number, typeof rest>();
+  for (const m of rest) {
+    const y = new Date(m.publishedAt).getFullYear();
+    if (!buckets.has(y)) buckets.set(y, []);
+    buckets.get(y)!.push(m);
+  }
+  const years = [...buckets.keys()].sort((a, b) => b - a);
 
   return (
     <SiteShell activeHref="/musings">
       <section className="page-intro">
         <div className="kicker">
-          <span>musings · 24 essays · since jan 2024</span>
+          <span>musings · {all.length} essays · since jan 2024</span>
         </div>
         <h1>
           Notes from <em>noticing.</em>
@@ -59,8 +66,8 @@ export default function MusingsPage() {
 
       <div className="toolbar">
         <div className="count">
-          <strong style={{ color: "var(--ink)" }}>{musings.length}</strong> essays ·
-          filtered by <em>all</em>
+          <strong style={{ color: "var(--ink)" }}>{all.length}</strong> essays · filtered
+          by <em>all</em>
         </div>
         <div className="sort">
           sort by
@@ -83,13 +90,17 @@ export default function MusingsPage() {
           </h2>
           <p className="dek">{renderInline(pick.dek)}</p>
           <div className="by">
-            <span>{formatMonthDay(pick.publishedAt)}, 2026</span>
+            <span>
+              {formatMonthDay(pick.publishedAt)},{" "}
+              {new Date(pick.publishedAt).getFullYear()}
+            </span>
             <span className="sep">·</span>
             <span>{pick.readingTimeMinutes} min read</span>
             <span className="chips">
+              <Chip tint="lavender">musing</Chip>
               {pick.tags.map((t) => (
-                <Chip key={t.label} tint={t.tint}>
-                  {t.label}
+                <Chip key={t} tint={tagToTint(t)}>
+                  {t}
                 </Chip>
               ))}
             </span>
@@ -100,22 +111,15 @@ export default function MusingsPage() {
         </div>
       </article>
 
-      {y2026.length > 0 && (
-        <>
-          <YearSep label="2026" tail="so far" />
-          <River items={y2026} />
-        </>
-      )}
-
-      {y2025.length > 0 && (
-        <>
-          <YearSep label="2025" tail="(a selection)" />
-          <River items={y2025} />
-        </>
-      )}
+      {years.map((y, i) => (
+        <div key={y}>
+          <YearSep label={String(y)} tail={i === 0 ? "so far" : "(a selection)"} />
+          <River items={buckets.get(y)!} />
+        </div>
+      ))}
 
       <nav className="pager" aria-label="Pagination">
-        <div>page 1 of 3 · {musings.length} essays</div>
+        <div>page 1 of 3 · {all.length} essays</div>
         <div className="pages">
           <span style={{ color: "var(--ink-4)" }}>←</span>
           <a className="active">1</a>
@@ -152,7 +156,7 @@ function YearSep({ label, tail }: { label: string; tail: string }) {
   );
 }
 
-function River({ items }: { items: typeof musings }) {
+function River({ items }: { items: ReturnType<typeof getPublishedMusings> }) {
   return (
     <section className="river">
       {items.map((m) => {
@@ -171,11 +175,13 @@ function River({ items }: { items: typeof musings }) {
               </h3>
               <p className="dek">{renderInline(m.dek)}</p>
               <div className="chips">
+                <Chip tint="lavender">musing</Chip>
                 {m.tags.map((t) => (
-                  <Chip key={t.label} tint={t.tint}>
-                    {t.label}
+                  <Chip key={t} tint={tagToTint(t)}>
+                    {t}
                   </Chip>
                 ))}
+                {m.status === "draft" && <DraftPill />}
               </div>
             </div>
             <div className="right">
@@ -189,7 +195,12 @@ function River({ items }: { items: typeof musings }) {
   );
 }
 
+function formatMonthDay(iso: string): string {
+  return new Date(iso)
+    .toLocaleDateString("en-US", { month: "short", day: "2-digit" })
+    .toLowerCase();
+}
+
 function mockReads(num: number): number {
-  // Deterministic-ish pseudo-reads so the page looks lived-in without a db.
   return 500 + ((num * 197) % 4000);
 }

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { musings, shorts } from "@/lib/sample-data";
+import { getAllMusings, getAllShorts } from "@/lib/posts";
 
 const SITE = "https://tinytrauma.in";
 
@@ -33,19 +33,23 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
   ];
 
-  const musingPages: MetadataRoute.Sitemap = musings.map((m) => ({
-    url: `${SITE}/musings/${m.slug}`,
-    lastModified: m.publishedAt,
-    changeFrequency: "yearly",
-    priority: 0.6,
-  }));
+  const musingPages: MetadataRoute.Sitemap = getAllMusings()
+    .filter((m) => m.status === "published")
+    .map((m) => ({
+      url: `${SITE}/musings/${m.slug}`,
+      lastModified: new Date(m.publishedAt),
+      changeFrequency: "yearly",
+      priority: 0.6,
+    }));
 
-  const shortPages: MetadataRoute.Sitemap = shorts.map((s) => ({
-    url: `${SITE}/shorts/${s.slug}`,
-    lastModified: s.publishedAt,
-    changeFrequency: "yearly",
-    priority: 0.6,
-  }));
+  const shortPages: MetadataRoute.Sitemap = getAllShorts()
+    .filter((s) => s.status === "published")
+    .map((s) => ({
+      url: `${SITE}/shorts/${s.slug}`,
+      lastModified: new Date(s.publishedAt),
+      changeFrequency: "yearly",
+      priority: 0.6,
+    }));
 
   return [...staticPages, ...musingPages, ...shortPages];
 }
