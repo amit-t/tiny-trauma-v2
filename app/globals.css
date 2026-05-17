@@ -1,9 +1,14 @@
 @import "tailwindcss";
 
+/* ============================================================
+   Tailwind v4 theme — maps CSS vars to utility classes.
+   Use bg-page, text-ink, font-display, etc.
+   ============================================================ */
 @theme {
   --color-page: var(--bg);
   --color-surface: var(--surface);
   --color-raised: var(--raised);
+  --color-art: var(--art);
   --color-ink: var(--ink);
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
@@ -11,14 +16,24 @@
   --color-accent: var(--accent);
   --color-accent-h: var(--accent-h);
   --color-hi: var(--hi);
+  --color-on-accent: var(--on-accent);
   --color-rule: var(--rule);
   --color-rule-soft: var(--border);
 
   --font-display: var(--font-display);
   --font-body: var(--font-body);
   --font-hand: var(--font-hand);
+
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
 }
 
+/* ============================================================
+   Color + type tokens (dark canonical, light alternate).
+   Verbatim from handoff/design/styles-v3.css.
+   ============================================================ */
 :root {
   --bg: #14110c;
   --surface: #1d1812;
@@ -54,6 +69,10 @@
   --chip-p-fg: #f2b6a0;
   --chip-sl-bg: #1e2a35;
   --chip-sl-fg: #a8c3dc;
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-1: 120ms;
+  --dur-2: 220ms;
 }
 
 [data-theme="light"] {
@@ -93,19 +112,832 @@
   --chip-sl-fg: #1f3a55;
 }
 
+/* ============================================================
+   Base
+   ============================================================ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html,
 body {
+  margin: 0;
+  padding: 0;
+}
+
+html {
   background: var(--bg);
   color: var(--ink);
+  font-family: var(--font-body), ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 body {
-  font-family: var(--font-body), ui-monospace, SFMono-Regular, Menlo, monospace;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "calt" 0;
+  transition:
+    background var(--dur-2) var(--ease),
+    color var(--dur-2) var(--ease);
 }
 
 ::selection {
   background: var(--hi);
+  color: var(--ink);
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+  transition: color var(--dur-1) var(--ease);
+}
+a:hover {
+  color: var(--accent-h);
+}
+
+h1,
+h2,
+h3,
+h4,
+p {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+:focus {
+  outline: none;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* ============================================================
+   Layout containers
+   ============================================================ */
+.wrap {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 0 56px;
+}
+.wrap-narrow {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 0 56px;
+}
+@media (max-width: 700px) {
+  .wrap,
+  .wrap-narrow {
+    padding: 0 24px;
+  }
+}
+
+/* ============================================================
+   Wordmark + nav
+   ============================================================ */
+.brand {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-transform: lowercase;
+  font-variation-settings:
+    "opsz" 144,
+    "SOFT" 30;
+  line-height: 1;
+  color: var(--ink);
+  text-decoration: none;
+}
+.brand i {
+  font-style: italic;
+  color: var(--accent);
+  font-weight: 700;
+}
+.brand:hover {
+  color: var(--ink);
+}
+.brand-nav {
+  font-size: 26px;
+}
+.brand-hero {
+  font-size: clamp(56px, 11vw, 144px);
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+}
+
+.nav {
+  padding: 28px 0 24px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--rule);
+}
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+}
+@media (max-width: 700px) {
+  .nav-links {
+    gap: 18px;
+  }
+  .nav-links .secondary {
+    display: none;
+  }
+}
+.nav-links a {
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: 14px;
+  text-decoration: none;
+  position: relative;
+  padding: 4px 0;
+}
+.nav-links a:hover {
+  color: var(--ink);
+}
+.nav-links a.active {
+  color: var(--ink);
+}
+.nav-links a.active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 2px;
+  background: var(--accent);
+}
+
+.theme-toggle {
+  border: 1px solid var(--border);
+  padding: 7px 14px;
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: 13px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  transition:
+    border-color var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease);
+}
+.theme-toggle:hover {
+  border-color: var(--ink-3);
+  color: var(--ink);
+}
+.theme-toggle .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+
+/* ============================================================
+   Buttons (primitive)
+   ============================================================ */
+.btn {
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 22px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    background var(--dur-1) var(--ease),
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+.btn-sm {
+  min-height: 36px;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+.btn-primary {
+  background: var(--accent);
   color: var(--on-accent);
+}
+.btn-primary:hover {
+  background: var(--accent-h);
+  color: var(--on-accent);
+}
+.btn-secondary {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--border);
+}
+.btn-secondary:hover {
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--ink-2);
+}
+.btn-ghost:hover {
+  color: var(--accent);
+}
+
+/* ============================================================
+   Inputs
+   ============================================================ */
+.input {
+  font: inherit;
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  outline: none;
+  width: 100%;
+  transition: border-color var(--dur-1) var(--ease);
+}
+.input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+  border-radius: 8px;
+  outline: none;
+}
+.input::placeholder {
+  color: var(--ink-3);
+  font-style: italic;
+}
+
+/* ============================================================
+   Chips
+   ============================================================ */
+.chip {
+  font-family: var(--font-body);
+  font-size: 11.5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-weight: 400;
+  display: inline-block;
+}
+.chip.l {
+  background: var(--chip-l-bg);
+  color: var(--chip-l-fg);
+}
+.chip.s {
+  background: var(--chip-s-bg);
+  color: var(--chip-s-fg);
+}
+.chip.b {
+  background: var(--chip-b-bg);
+  color: var(--chip-b-fg);
+}
+.chip.p {
+  background: var(--chip-p-bg);
+  color: var(--chip-p-fg);
+}
+.chip.sl {
+  background: var(--chip-sl-bg);
+  color: var(--chip-sl-fg);
+}
+
+/* ============================================================
+   Filter pills
+   ============================================================ */
+.filter {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--ink-2);
+  transition: all var(--dur-1) var(--ease);
+}
+.filter:hover {
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+.filter.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+.filter .count {
+  color: var(--ink-3);
+  margin-left: 6px;
+}
+
+/* ============================================================
+   Handwritten aside
+   ============================================================ */
+.hand-inline {
+  font-family: var(--font-hand);
+  font-weight: 500;
+  color: var(--accent);
+  font-size: 1.5em;
+  line-height: 1;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  margin: 0 0.04em;
+}
+.hand-aside {
+  font-family: var(--font-hand);
+  color: var(--accent);
+  font-size: 22px;
+  line-height: 1.1;
+  transform: rotate(-2.5deg);
+  display: inline-block;
+}
+
+/* ============================================================
+   Art slot — placeholder striped panel
+   ============================================================ */
+.art-slot {
+  border-radius: 16px;
+  background: var(--art);
+  position: relative;
+  overflow: hidden;
+}
+.art-slot::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--stripe) 0 14px,
+    transparent 14px 28px
+  );
+}
+.art-slot.tint-l {
+  background: var(--art-l);
+}
+.art-slot.tint-s {
+  background: var(--art-s);
+}
+.art-slot.tint-b {
+  background: var(--art-b);
+}
+.art-slot.tint-p {
+  background: var(--art-p);
+}
+.art-slot.tint-sl {
+  background: var(--art-sl);
+}
+.art-slot .ph {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--ink-3);
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 5px 12px;
+  border-radius: 4px;
+  font-family: var(--font-body);
+}
+[data-theme="light"] .art-slot .ph {
+  background: rgba(20, 17, 12, 0.18);
+  color: var(--ink-2);
+}
+
+/* ============================================================
+   Pull quote
+   ============================================================ */
+.pullquote {
+  margin: 32px 0;
+  padding: 24px 28px;
+  background: var(--surface);
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 24px;
+  line-height: 1.35;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+  font-variation-settings:
+    "opsz" 36,
+    "SOFT" 70;
+  position: relative;
+}
+.pullquote::before {
+  content: "\201C";
+  position: absolute;
+  left: 14px;
+  top: -2px;
+  font-family: var(--font-display);
+  font-size: 80px;
+  line-height: 1;
+  color: var(--accent);
+  opacity: 0.5;
+  font-style: italic;
+}
+.pullquote .body {
+  padding-left: 22px;
+}
+.pullquote .src {
+  display: block;
+  margin-top: 14px;
+  padding-left: 22px;
+  font-family: var(--font-body);
+  font-style: normal;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+/* ============================================================
+   Marginalia (essay reading view metadata column)
+   ============================================================ */
+.margin {
+  position: sticky;
+  top: 32px;
+  align-self: start;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.55;
+}
+@media (max-width: 980px) {
+  .margin {
+    position: static;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--rule);
+  }
+}
+.margin .grp {
+  margin-bottom: 18px;
+}
+@media (max-width: 980px) {
+  .margin .grp {
+    margin-bottom: 0;
+  }
+}
+.margin .lbl {
+  color: var(--ink-4);
+  font-size: 11.5px;
+  margin-bottom: 4px;
+}
+.margin .val {
+  color: var(--ink-2);
+}
+.margin a.back {
+  display: inline-block;
+  margin-top: 8px;
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+}
+.margin a.back:hover {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+/* ============================================================
+   Cover card (shorts)
+   ============================================================ */
+.cover-card {
+  display: grid;
+  gap: 14px;
+  cursor: pointer;
+}
+.cover-card .cover {
+  aspect-ratio: 3/4;
+  background: var(--art-b);
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+  transition: transform var(--dur-2) var(--ease);
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  color: var(--ink);
+}
+.cover-card:hover .cover {
+  transform: translateY(-4px);
+}
+.cover-card .cover::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.03) 0 14px,
+    transparent 14px 28px
+  );
+}
+.cover-card .cover .no {
+  position: relative;
+  font-family: var(--font-body);
+  font-size: 12px;
+  color: var(--ink-3);
+  letter-spacing: 0.04em;
+}
+.cover-card .cover .title {
+  position: relative;
+  margin-top: auto;
+  font-family: var(--font-display);
+  font-size: 30px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  font-variation-settings:
+    "opsz" 60,
+    "SOFT" 40;
+  color: var(--ink);
+  max-width: 12ch;
+}
+.cover-card .cover .title em {
+  font-style: italic;
+  color: var(--accent);
+  font-weight: 600;
+}
+.cover-card .cover .corner-mark {
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  font-family: var(--font-hand);
+  font-size: 20px;
+  color: var(--accent);
+  transform: rotate(8deg);
+}
+.cover-card.c-a .cover {
+  background: var(--art-p);
+}
+.cover-card.c-b .cover {
+  background: var(--art-l);
+}
+.cover-card.c-c .cover {
+  background: var(--art-s);
+}
+.cover-card.c-d .cover {
+  background: var(--art-sl);
+}
+.cover-card.c-e .cover {
+  background: var(--art-b);
+}
+.cover-card.c-f .cover {
+  background: var(--art);
+}
+
+/* ============================================================
+   Colophon footer + currently column
+   ============================================================ */
+.colophon {
+  padding: 40px 0 32px;
+  border-top: 1px solid var(--rule);
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 56px;
+}
+@media (max-width: 700px) {
+  .colophon {
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+}
+.colophon h4 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin-bottom: 10px;
+  font-variation-settings:
+    "opsz" 24,
+    "SOFT" 70;
+}
+.colophon p {
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.6;
+  max-width: 46ch;
+}
+.colophon .hand {
+  font-family: var(--font-hand);
+  color: var(--accent);
+  font-size: 22px;
+  transform: rotate(-3deg);
+  display: inline-block;
+  margin-top: 16px;
+}
+.colophon-base {
+  border-top: 1px solid var(--border);
+  padding: 24px 0 64px;
+  color: var(--ink-3);
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.currently dl {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+}
+.currently dl > div {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  gap: 16px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.currently dt {
+  color: var(--ink-3);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  padding-top: 2px;
+}
+.currently dd {
+  margin: 0;
+  color: var(--ink-2);
+  font-family: var(--font-body);
+}
+.currently dd em {
+  color: var(--ink);
+  font-style: italic;
+}
+.currently dd .meta {
+  color: var(--ink-3);
+  font-size: 12px;
+  display: block;
+  margin-top: 2px;
+}
+
+/* ============================================================
+   Elsewhere strip
+   ============================================================ */
+.elsewhere-strip {
+  padding: 18px 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.elsewhere-strip .label {
+  color: var(--ink-3);
+  font-family: var(--font-body);
+}
+.elsewhere-strip a {
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+  transition:
+    color var(--dur-1) var(--ease),
+    border-color var(--dur-1) var(--ease);
+}
+.elsewhere-strip a:hover {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+/* ============================================================
+   Page intro (list pages, about)
+   ============================================================ */
+.page-intro {
+  padding: 72px 0 48px;
+}
+.page-intro .kicker {
+  color: var(--accent);
+  font-size: 13.5px;
+  margin-bottom: 16px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.page-intro h1 {
+  font-family: var(--font-display);
+  font-size: clamp(48px, 8vw, 96px);
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  font-variation-settings:
+    "opsz" 144,
+    "SOFT" 40;
+  color: var(--ink);
+  max-width: 16ch;
+}
+.page-intro h1 em {
+  font-style: italic;
+  color: var(--accent);
+  font-weight: 600;
+}
+.page-intro .lede {
+  font-family: var(--font-body);
+  color: var(--ink-2);
+  font-size: 16px;
+  line-height: 1.65;
+  margin-top: 24px;
+  max-width: 52ch;
+}
+
+/* ============================================================
+   Type-scale utilities (for showcase + reuse)
+   ============================================================ */
+.t-display {
+  font-family: var(--font-display);
+  font-size: clamp(56px, 11vw, 144px);
+  line-height: 0.92;
+  letter-spacing: -0.045em;
+  font-weight: 800;
+  font-variation-settings:
+    "opsz" 144,
+    "SOFT" 30;
+}
+.t-h1 {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 6vw, 72px);
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  font-variation-settings:
+    "opsz" 90,
+    "SOFT" 40;
+}
+.t-h2 {
+  font-family: var(--font-display);
+  font-size: clamp(40px, 5vw, 56px);
+  line-height: 1;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  font-variation-settings:
+    "opsz" 60,
+    "SOFT" 50;
+}
+.t-h3 {
+  font-family: var(--font-display);
+  font-size: 26px;
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+  font-weight: 500;
+  font-variation-settings:
+    "opsz" 32,
+    "SOFT" 70;
+}
+.t-h4 {
+  font-family: var(--font-display);
+  font-size: 20px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  font-weight: 600;
+  font-variation-settings:
+    "opsz" 24,
+    "SOFT" 70;
+}
+.t-lede {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 22px;
+  line-height: 1.5;
+  color: var(--ink-2);
+  font-variation-settings:
+    "opsz" 30,
+    "SOFT" 70;
+}
+.t-body {
+  font-family: var(--font-body);
+  font-size: 15.5px;
+  line-height: 1.78;
+  color: var(--ink);
+}
+.t-small {
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.t-caption {
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
 }
