@@ -2,10 +2,29 @@ import type { Metadata } from "next";
 import { body, display, hand } from "@/lib/fonts";
 import "./globals.css";
 
+const DESCRIPTION =
+  "A personal blog about the small daily friction between who you are and everything around you. Honest, slightly literary, sometimes funny, occasionally devastating, never a wellness tip.";
+
 export const metadata: Metadata = {
-  title: "Tiny Trauma — daily friction, mostly",
-  description:
-    "A personal blog about the small daily friction between who you are and everything around you. Honest, slightly literary, sometimes funny, occasionally devastating, never a wellness tip.",
+  metadataBase: new URL("https://tinytrauma.in"),
+  title: {
+    default: "Tiny Trauma — daily friction, mostly",
+    template: "%s — Tiny Trauma",
+  },
+  description: DESCRIPTION,
+  openGraph: {
+    title: "Tiny Trauma — daily friction, mostly",
+    description: DESCRIPTION,
+    siteName: "Tiny Trauma",
+    type: "website",
+    locale: "en_IN",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Tiny Trauma",
+    description: DESCRIPTION,
+  },
+  alternates: { types: { "application/rss+xml": "/feed.xml" } },
 };
 
 export default function RootLayout({
