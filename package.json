@@ -17,6 +17,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "auth:init": "node scripts/init-auth-db.mjs",
+    "app:init": "node scripts/init-app-db.mjs",
     "content": "velite build --strict",
     "content:watch": "velite dev",
     "test": "vitest"
@@ -40,6 +41,7 @@
     "react-dom": "19.2.4",
     "react-email": "^6.1.4",
     "resend": "^6.12.3",
+    "svix": "^1.93.0",
     "tailwind-merge": "^3.6.0",
     "unist-util-visit": "^5.1.0",
     "velite": "^0.3.1",

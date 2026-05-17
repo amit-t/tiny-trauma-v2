@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { ArtSlot } from "@/components/ui/art-slot";
-import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { DraftPill } from "@/components/ui/draft-pill";
 import { FilterPill } from "@/components/ui/filter-pill";
 import { HandInline } from "@/components/ui/hand-inline";
-import { Input } from "@/components/ui/input";
 import { SiteShell } from "@/components/layout/site-shell";
+import { SubscribeForm } from "@/components/subscribe-form";
 import {
   cardTintFromHero,
   getPublishedMusings,
@@ -144,16 +143,7 @@ export default function Home() {
             threads, no tips, no productivity. I read every reply.
           </p>
         </div>
-        <form action="/newsletter">
-          <div className="row">
-            <Input placeholder="first name" required />
-            <Input type="email" placeholder="you@somewhere.com" required />
-          </div>
-          <Button type="submit">subscribe →</Button>
-          <p className="small">
-            no spam. unsubscribe in one click. I read every reply, even the angry ones.
-          </p>
-        </form>
+        <SubscribeForm variant="band" source="home" />
       </section>
     </SiteShell>
   );

@@ -145,11 +145,7 @@ function Pill({
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={on ? "filter active" : "filter"}
-    >
+    <button type="button" onClick={onClick} className={on ? "active filter" : "filter"}>
       {children}
     </button>
   );

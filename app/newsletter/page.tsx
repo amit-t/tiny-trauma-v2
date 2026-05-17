@@ -1,19 +1,72 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { HandInline } from "@/components/ui/hand-inline";
-import { Input } from "@/components/ui/input";
 import { SiteShell } from "@/components/layout/site-shell";
-import { pastLetters } from "@/lib/sample-data";
+import { SubscribeForm } from "@/components/subscribe-form";
+import { listSentCampaigns } from "@/lib/campaigns";
+import { pastLetters as samplePastLetters } from "@/lib/sample-data";
+import { findMusing, findShort } from "@/lib/posts";
 import { renderInline } from "@/lib/render-prose";
 import { padNum, stripMarkers } from "@/lib/format";
 
 import type { Metadata } from "next";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Newsletter",
   description:
     "One short essay, in your inbox, most Sundays. Sometimes a short fiction on the side. No threads, no tips.",
 };
+
+type PastEntry = {
+  key: string;
+  number: number;
+  date: string;
+  href: string;
+  title: string;
+  summary: string;
+  stat: string;
+};
+
+/**
+ * Past letters come from the real campaigns table once any have been sent.
+ * Until then we fall back to the sample data so the page never reads empty
+ * in dev.
+ */
+function loadPastLetters(): PastEntry[] {
+  const sent = listSentCampaigns();
+  if (sent.length === 0) {
+    return samplePastLetters.map((p) => ({
+      key: `sample-${p.number}`,
+      number: p.number,
+      date: p.date,
+      href: `/musings/${p.musingSlug}`,
+      title: p.summary.split(".")[0]!,
+      summary: p.summary,
+      stat: `${p.opens.toLocaleString()} opens`,
+    }));
+  }
+  return sent.map((c) => {
+    const post = c.postType === "musing" ? findMusing(c.postSlug) : findShort(c.postSlug);
+    const path = c.postType === "musing" ? "musings" : "shorts";
+    return {
+      key: c.id,
+      number: post?.number ?? 0,
+      date: formatShortDate(c.sentAt ?? c.createdAt),
+      href: `/${path}/${c.postSlug}`,
+      title: post?.title ?? c.subject,
+      summary: post?.dek ?? c.preheader,
+      stat:
+        c.openCount > 0 ? `${c.openCount.toLocaleString()} opens` : `${c.sentCount} sent`,
+    };
+  });
+}
+
+function formatShortDate(ms: number): string {
+  return new Date(ms)
+    .toLocaleDateString("en-US", { month: "short", day: "2-digit" })
+    .toLowerCase();
+}
 
 const FAQ = [
   {
@@ -104,22 +157,7 @@ export default function NewsletterPage() {
             even the angry ones, especially the angry ones.
           </p>
         </div>
-        <form>
-          <div className="row">
-            <Input placeholder="first name" required />
-            <Input type="email" placeholder="you@somewhere.com" required />
-          </div>
-          <div className="tiers">
-            <span className="tier-pick on">weekly · free</span>
-            <span className="tier-pick">monthly · free</span>
-            <span className="tier-pick">both · free</span>
-          </div>
-          <Button type="submit">subscribe →</Button>
-          <p className="small">
-            it&apos;s all free. there will probably never be a paid tier.{" "}
-            <em>probably.</em>
-          </p>
-        </form>
+        <SubscribeForm variant="card" source="newsletter" />
       </section>
 
       <section className="what">
@@ -186,25 +224,7 @@ export default function NewsletterPage() {
             browse the full archive →
           </Link>
         </div>
-        <div className="past-list">
-          {pastLetters.map((p) => (
-            <article key={p.number} className="past-item">
-              <div className="when">
-                <span className="num">№ {padNum(p.number)}</span>
-                {p.date}
-              </div>
-              <div>
-                <h4>
-                  <Link href={`/musings/${p.musingSlug}`} title={stripMarkers(p.summary)}>
-                    {renderInline(p.summary.split(".")[0])}
-                  </Link>
-                </h4>
-                <p className="summary">{renderInline(p.summary)}</p>
-              </div>
-              <div className="stat">{p.opens.toLocaleString()} opens</div>
-            </article>
-          ))}
-        </div>
+        <PastList />
       </section>
 
       <section className="faq">
@@ -254,28 +274,44 @@ export default function NewsletterPage() {
           get the <em style={{ color: "var(--accent)", fontStyle: "italic" }}>small</em>{" "}
           things, weekly.
         </h2>
-        <form
+        <div
           style={{
             margin: "28px auto 0",
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 8,
             maxWidth: 480,
             padding: "0 16px",
           }}
         >
-          <Input
-            type="email"
-            placeholder="you@somewhere.com"
-            required
-            style={{ flex: "1 1 200px" }}
-          />
-          <Button type="submit">subscribe →</Button>
-        </form>
+          <SubscribeForm variant="mini" source="footer" />
+        </div>
         <p style={{ color: "var(--ink-3)", fontSize: 12.5, marginTop: 12 }}>
           no spam · unsubscribe in one click · I read every reply.
         </p>
       </section>
     </SiteShell>
+  );
+}
+
+function PastList() {
+  const items = loadPastLetters();
+  return (
+    <div className="past-list">
+      {items.map((p) => (
+        <article key={p.key} className="past-item">
+          <div className="when">
+            <span className="num">№ {padNum(p.number)}</span>
+            {p.date}
+          </div>
+          <div>
+            <h4>
+              <Link href={p.href} title={stripMarkers(p.summary)}>
+                {renderInline(p.title)}
+              </Link>
+            </h4>
+            <p className="summary">{renderInline(p.summary)}</p>
+          </div>
+          <div className="stat">{p.stat}</div>
+        </article>
+      ))}
+    </div>
   );
 }

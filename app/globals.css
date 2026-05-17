@@ -3292,3 +3292,42 @@ button {
 .admin-frontmatter .admin-env-grid {
   max-width: none;
 }
+
+/* ----- Admin · row actions ----- */
+.admin-row-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.admin-link-danger {
+  color: var(--accent);
+}
+.admin-link-danger:hover {
+  color: var(--accent-h);
+  border-bottom-color: var(--accent-h);
+}
+
+/* ----- Admin · campaign editor ----- */
+.admin-campaign-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px;
+  margin-top: 24px;
+}
+@media (max-width: 1080px) {
+  .admin-campaign-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.admin-body-snapshot {
+  font-family: var(--font-body);
+  font-size: 13px;
+  line-height: 1.55;
+  resize: vertical;
+  min-height: 360px;
+}
+.admin-campaign-preview {
+  display: grid;
+  gap: 8px;
+}

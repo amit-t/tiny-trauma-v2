@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { HandInline } from "@/components/ui/hand-inline";
-import { Input } from "@/components/ui/input";
 import { SiteShell } from "@/components/layout/site-shell";
+import { SubscribeForm } from "@/components/subscribe-form";
 
 import type { Metadata } from "next";
 
@@ -129,10 +128,7 @@ export default function AboutPage() {
               one short essay every sunday, sometimes a short fiction on the side. no
               threads. no tips.
             </p>
-            <form action="/newsletter">
-              <Input type="email" placeholder="you@somewhere.com" required />
-              <Button type="submit">subscribe →</Button>
-            </form>
+            <SubscribeForm variant="side" source="about" />
           </div>
         </aside>
       </div>
