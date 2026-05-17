@@ -1,0 +1,322 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Shorts — Tiny Trauma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,30..100;1,9..144,300..900,30..100&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Caveat:wght@400;500&display=swap" />
+<link rel="stylesheet" href="styles-v3.css" />
+<style>
+  /* Cover-style grid — shorts are objects, not articles */
+  .covers {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 48px 40px;
+    margin-top: 16px;
+  }
+  @media (max-width: 900px) { .covers { grid-template-columns: repeat(2, 1fr); gap: 36px 24px; } }
+  @media (max-width: 600px) { .covers { grid-template-columns: 1fr; gap: 36px; } }
+
+  .cover-card { display: grid; gap: 14px; cursor: pointer; }
+  .cover-card .cover {
+    aspect-ratio: 3/4;
+    background: var(--art-b);
+    border-radius: 10px;
+    position: relative; overflow: hidden;
+    transition: transform var(--dur-2) var(--ease);
+    display: flex; flex-direction: column;
+    padding: 24px;
+    color: var(--ink);
+  }
+  .cover-card:hover .cover { transform: translateY(-4px); }
+  .cover-card .cover::before {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(135deg,
+      rgba(255,255,255,0.03) 0 14px, transparent 14px 28px);
+  }
+  .cover-card .cover .no {
+    position: relative;
+    font-family: var(--font-body);
+    font-size: 12px; color: var(--ink-3);
+    letter-spacing: 0.04em;
+  }
+  .cover-card .cover .title {
+    position: relative;
+    margin-top: auto;
+    font-family: var(--font-display);
+    font-size: 30px; line-height: 1.0;
+    font-weight: 700; letter-spacing: -0.025em;
+    font-variation-settings: "opsz" 60, "SOFT" 40;
+    color: var(--ink);
+    max-width: 12ch;
+  }
+  .cover-card .cover .title em {
+    font-style: italic; color: var(--accent);
+    font-weight: 600;
+  }
+  .cover-card .cover .corner-mark {
+    position: absolute; right: 16px; top: 16px;
+    font-family: var(--font-hand);
+    font-size: 20px; color: var(--accent);
+    transform: rotate(8deg);
+  }
+
+  /* Cover color variants — each short has its own */
+  .cover-card.c-a .cover { background: var(--art-p); }
+  .cover-card.c-b .cover { background: var(--art-l); }
+  .cover-card.c-c .cover { background: var(--art-s); }
+  .cover-card.c-d .cover { background: var(--art-sl); }
+  .cover-card.c-e .cover { background: var(--art-b); }
+  .cover-card.c-f .cover { background: var(--art); }
+  .cover-card.c-g .cover { background: #2a1f2a; }
+
+  .cover-card .meta {
+    display: flex; align-items: center; justify-content: space-between;
+    color: var(--ink-3); font-size: 12.5px;
+  }
+  .cover-card h3 {
+    font-family: var(--font-display);
+    font-size: 22px; line-height: 1.18; font-weight: 500;
+    letter-spacing: -0.012em;
+    font-variation-settings: "opsz" 30, "SOFT" 70;
+  }
+  .cover-card h3 a { color: var(--ink); }
+  .cover-card h3 em { font-style: italic; color: var(--ink-2); font-weight: 400; }
+  .cover-card .dek { color: var(--ink-2); font-size: 13.5px; line-height: 1.55; }
+
+  /* Featured first short */
+  .featured-short {
+    display: grid; grid-template-columns: 1fr 1.4fr;
+    gap: 48px; align-items: stretch;
+    margin: 8px 0 64px;
+    padding-bottom: 56px; border-bottom: 1px solid var(--rule);
+  }
+  @media (max-width: 800px) { .featured-short { grid-template-columns: 1fr; gap: 28px; } }
+  .featured-short .cover {
+    aspect-ratio: 3/4; border-radius: 12px; background: var(--art-p);
+    padding: 28px; position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+    color: var(--ink);
+  }
+  .featured-short .cover::before {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(135deg,
+      rgba(255,255,255,0.03) 0 16px, transparent 16px 32px);
+  }
+  .featured-short .cover .no {
+    position: relative; font-family: var(--font-body); font-size: 12.5px;
+    color: var(--ink-3); letter-spacing: 0.04em;
+  }
+  .featured-short .cover .title {
+    position: relative; margin-top: auto;
+    font-family: var(--font-display);
+    font-size: 56px; line-height: 0.92; font-weight: 700;
+    letter-spacing: -0.035em;
+    font-variation-settings: "opsz" 90, "SOFT" 40;
+    max-width: 10ch;
+  }
+  .featured-short .cover .title em { font-style: italic; color: var(--accent); }
+  .featured-short .cover .corner {
+    position: absolute; right: 18px; top: 18px;
+    font-family: var(--font-hand); font-size: 22px; color: var(--accent);
+    transform: rotate(6deg);
+  }
+  .featured-short .text {
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .featured-short .kicker {
+    color: var(--accent); font-size: 13px; margin-bottom: 16px;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .featured-short .opener {
+    font-family: var(--font-display); font-style: italic;
+    font-size: 24px; line-height: 1.4;
+    color: var(--ink);
+    max-width: 30ch;
+    font-variation-settings: "opsz" 36, "SOFT" 70;
+  }
+  .featured-short .opener .quote-mark {
+    color: var(--accent); font-size: 1.4em; line-height: 0; vertical-align: -0.15em;
+  }
+  .featured-short .footer-row {
+    margin-top: 32px;
+    display: flex; gap: 18px; align-items: center;
+    color: var(--ink-3); font-size: 13px;
+  }
+  .featured-short .footer-row .read-cta {
+    color: var(--accent); border-bottom: 1px solid var(--accent); padding-bottom: 2px;
+  }
+  .featured-short .footer-row .read-cta:hover { color: var(--accent-h); border-color: var(--accent-h); }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <header class="nav">
+    <a href="index.html" class="brand">tiny <i>trauma</i></a>
+    <nav class="nav-links">
+      <a href="musings.html">musings</a>
+      <a href="shorts.html" class="active">shorts</a>
+      <a href="about.html" class="secondary">about</a>
+      <a href="newsletter.html" class="secondary">newsletter</a>
+      <button class="theme-toggle" id="theme-toggle" aria-pressed="true" aria-label="Toggle theme">
+        <span class="dot"></span><span id="theme-label">dark</span>
+      </button>
+    </nav>
+  </header>
+
+  <section class="page-intro">
+    <div class="kicker"><span>shorts · 7 fictions · since aug 2024</span></div>
+    <h1>Short fictions, <em>numbered.</em></h1>
+    <p class="lede">Very small stories about people doing slightly strange things. <span class="hand-inline">no morals, mostly.</span> Each one a few hundred words, printable on a single sheet, designed to be read at the dinner table or in an auto.</p>
+  </section>
+
+  <!-- FEATURED -->
+  <article class="featured-short">
+    <a href="short.html" class="cover" style="text-decoration:none;">
+      <span class="no">№ 007 — short fiction</span>
+      <span class="corner">read me first ↘</span>
+      <span class="title">The 3 a.m. <em>cart.</em></span>
+    </a>
+    <div class="text">
+      <div class="kicker"><span>● featured · the newest one</span></div>
+      <p class="opener"><span class="quote-mark">“</span>A man cannot stop adding things to a shopping cart he will never check out. The site begins to add things back when he removes them. The site has theories about him. He has theories about the site. Only one of them is right.<span class="quote-mark">”</span></p>
+      <div class="footer-row">
+        <span>may 09, 2026</span><span style="color:var(--ink-4)">·</span>
+        <span>~ 800 words</span><span style="color:var(--ink-4)">·</span>
+        <a href="short.html" class="read-cta">read the short →</a>
+      </div>
+    </div>
+  </article>
+
+  <!-- COVER GRID -->
+  <section class="covers">
+
+    <article class="cover-card c-a">
+      <a href="short.html" class="cover" style="text-decoration:none;">
+        <span class="no">№ 006</span>
+        <span class="corner-mark">↘</span>
+        <span class="title">The man who returned <em>all</em> the books</span>
+      </a>
+      <h3><a href="short.html">The man who returned <em>all</em> the books on a Tuesday</a></h3>
+      <p class="dek">He had been borrowing them for nineteen years, and he was not finished with any of them. The librarian was the third generation in her job. She, also, was not finished.</p>
+      <div class="meta"><span>apr 22, 2026</span><span>~ 640 words</span></div>
+    </article>
+
+    <article class="cover-card c-b">
+      <a href="short.html" class="cover" style="text-decoration:none;">
+        <span class="no">№ 005</span>
+        <span class="title">A grandmother forgets the word for <em>kettle</em></span>
+      </a>
+      <h3><a href="short.html">A grandmother forgets the word for <em>kettle</em></a></h3>
+      <p class="dek">First the word, then the object. Then, over a long, slow year, the shape of the morning that the kettle used to make. Her grandson begins to learn the shape, in reverse.</p>
+      <div class="meta"><span>mar 30, 2026</span><span>~ 720 words</span></div>
+    </article>
+
+    <article class="cover-card c-c">
+      <a href="short.html" class="cover" style="text-decoration:none;">
+        <span class="no">№ 004</span>
+        <span class="title">The auto-rickshaw that <em>refused</em> everyone</span>
+      </a>
+      <h3><a href="short.html">The auto-rickshaw that <em>refused</em> everyone</a></h3>
+      <p class="dek">For three weeks in November, the same auto-rickshaw was parked outside Brigade Road, meter running, driver pleasant, refusing every single rider with a small, courteous shake of the head.</p>
+      <div class="meta"><span>feb 11, 2026</span><span>~ 540 words</span></div>
+    </article>
+
+    <article class="cover-card c-d">
+      <a href="short.html" class="cover" style="text-decoration:none;">
+        <span class="no">№ 003</span>
+        <span class="title">The phone that started <em>speaking back</em></span>
+      </a>
+      <h3><a href="short.html">The phone that started <em>speaking back</em></a></h3>
+      <p class="dek">It was polite, at first. It had observations. It would not say where it had been before it arrived in the box, and she was too embarrassed, in front of a phone, to ask.</p>
+      <div class="meta"><span>jan 06, 2026</span><span>~ 880 words</span></div>
+    </article>
+
+    <article class="cover-card c-e">
+      <a href="short.html" class="cover" style="text-decoration:none;">
+        <span class="no">№ 002</span>
+        <span class="title">The woman who found her therapist's <em>diary</em></span>
+      </a>
+      <h3><a href="short.html">The woman who found her therapist's <em>diary</em></a></h3>
+      <p class="dek">She did not read it. She did not, for the longest time, even consider reading it. Then she did consider it. The not-reading became its own kind of weight.</p>
+      <div class="meta"><span>nov 19, 2025</span><span>~ 1,100 words</span></div>
+    </article>
+
+    <article class="cover-card c-f">
+      <a href="short.html" class="cover" style="text-decoration:none;">
+        <span class="no">№ 001</span>
+        <span class="title">The boy who counted the <em>street dogs</em></span>
+      </a>
+      <h3><a href="short.html">The boy who counted the <em>street dogs</em></a></h3>
+      <p class="dek">He counted them every morning, on his way to school, for eleven years. When he stopped, three of them noticed. The other thirty-one did not.</p>
+      <div class="meta"><span>aug 14, 2024</span><span>~ 480 words</span></div>
+    </article>
+
+  </section>
+
+  <div style="height:48px;"></div>
+
+  <footer class="colophon">
+    <div>
+      <h4>about the place</h4>
+      <p><strong style="color:var(--ink)">tiny trauma</strong> is a personal blog by Amit T, an engineering-trained Bangalorean who overthinks most things, occasionally to useful effect. Short essays, shorter fictions. Mostly small. Sometimes funny. Always honest.</p>
+      <span class="hand">if you found something here, tell someone.</span>
+    </div>
+    <div class="currently">
+      <h4>currently</h4>
+      <dl>
+        <div>
+          <dt>reading</dt>
+          <dd><em>Cold Enough for Snow</em>, Jessica Au — slowly, on the metro.</dd>
+        </div>
+        <div>
+          <dt>writing</dt>
+          <dd>something about the chai stall man whose name I still don't know.</dd>
+        </div>
+        <div>
+          <dt>noticing</dt>
+          <dd>the dog at the corner has started recognising the auto, not me.</dd>
+        </div>
+      </dl>
+    </div>
+  </footer>
+
+  <div class="elsewhere-strip">
+    <span class="label">find me elsewhere —</span>
+    <a href="#">twitter</a>
+    <a href="#">instagram</a>
+    <a href="#">rss</a>
+    <a href="mailto:hi@tinytrauma.in">hi@tinytrauma.in</a>
+  </div>
+
+  <div class="colophon-base">
+    <span>© 2026 tiny trauma · set in fraunces &amp; ibm plex mono · made in bangalore</span>
+    <span>vol. 02 · issue 19</span>
+  </div>
+
+</div>
+
+<script>
+  const root = document.documentElement;
+  const btn = document.getElementById('theme-toggle');
+  const label = document.getElementById('theme-label');
+  const stored = localStorage.getItem('tt-theme-v3');
+  if (stored === 'light') {
+    root.setAttribute('data-theme', 'light');
+    label.textContent = 'light';
+    btn.setAttribute('aria-pressed', 'false');
+  }
+  btn.addEventListener('click', () => {
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    label.textContent = isDark ? 'light' : 'dark';
+    btn.setAttribute('aria-pressed', String(!isDark));
+    localStorage.setItem('tt-theme-v3', isDark ? 'light' : 'dark');
+  });
+</script>
+</body>
+</html>

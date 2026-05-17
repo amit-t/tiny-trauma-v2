@@ -1,0 +1,354 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>About — Tiny Trauma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,30..100;1,9..144,300..900,30..100&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Caveat:wght@400;500&display=swap" />
+<link rel="stylesheet" href="styles-v3.css" />
+<style>
+  /* Two-column on desktop, stacked on mobile */
+  .about-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 72px;
+    margin-top: 24px; padding-bottom: 56px;
+  }
+  @media (max-width: 900px) { .about-grid { grid-template-columns: 1fr; gap: 36px; } }
+
+  .about-grid .prose {
+    font-family: var(--font-body); font-size: 15.5px; line-height: 1.78;
+    color: var(--ink);
+  }
+  .about-grid .prose p + p { margin-top: 16px; }
+  .about-grid .prose em { font-style: italic; color: var(--ink); }
+  .about-grid .prose .lede {
+    font-family: var(--font-display); font-style: italic;
+    color: var(--ink-2); font-size: 22px; line-height: 1.45;
+    margin-bottom: 24px;
+    font-variation-settings: "opsz" 30, "SOFT" 70;
+  }
+  .about-grid .prose a { color: var(--accent); border-bottom: 1px solid currentColor; }
+  .about-grid .prose a:hover { color: var(--accent-h); }
+  .about-grid .prose h2 {
+    font-family: var(--font-display);
+    font-size: 28px; font-weight: 500;
+    letter-spacing: -0.015em;
+    margin: 40px 0 12px;
+    font-variation-settings: "opsz" 36, "SOFT" 70;
+  }
+  .about-grid .prose h2 em { font-style: italic; color: var(--ink-2); }
+
+  /* Sidebar */
+  .side { display: flex; flex-direction: column; gap: 28px; position: sticky; top: 32px; align-self: start; }
+  @media (max-width: 900px) { .side { position: static; max-width: 28rem; margin: 0 auto; } }
+
+  .side .photo {
+    aspect-ratio: 4/5;
+    border-radius: 14px;
+    background: var(--art-p);
+    position: relative; overflow: hidden;
+  }
+  .side .photo::before {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(135deg,
+      rgba(255,255,255,0.03) 0 14px, transparent 14px 28px);
+  }
+  .side .photo .ph {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--ink-3); font-size: 12px;
+    background: rgba(0,0,0,0.4); padding: 6px 12px; border-radius: 4px;
+    font-family: var(--font-body);
+  }
+  [data-theme="light"] .side .photo .ph { background: rgba(20,17,12,0.18); color: var(--ink-2); }
+  .side .photo .scribble {
+    position: absolute; right: 14px; bottom: 14px;
+    font-family: var(--font-hand);
+    color: var(--accent); font-size: 22px;
+    transform: rotate(-3deg);
+    background: var(--bg); padding: 2px 10px; border-radius: 6px;
+  }
+
+  .side h3 {
+    font-family: var(--font-display);
+    font-size: 18px; font-weight: 600;
+    letter-spacing: -0.005em;
+    margin-bottom: 8px;
+    font-variation-settings: "opsz" 24, "SOFT" 70;
+    color: var(--ink);
+  }
+  .side .bio {
+    color: var(--ink-2); font-size: 13.5px; line-height: 1.6;
+  }
+  .side .bio em { color: var(--ink); font-style: italic; }
+
+  /* Facts list */
+  .facts {
+    display: grid; gap: 10px;
+    padding: 20px;
+    border: 1px solid var(--border); border-radius: 12px;
+    background: var(--surface);
+  }
+  .facts .row {
+    display: grid; grid-template-columns: 7rem 1fr; gap: 12px;
+    font-size: 13px; line-height: 1.5;
+  }
+  .facts .row .k { color: var(--ink-3); }
+  .facts .row .v { color: var(--ink); }
+  .facts .row .v em { color: var(--ink-2); font-style: italic; }
+
+  /* CTA sidebar mini */
+  .side .cta {
+    padding: 20px;
+    background: var(--surface); border-radius: 12px;
+  }
+  .side .cta h4 {
+    font-family: var(--font-display); font-size: 18px; font-weight: 500;
+    color: var(--ink); margin-bottom: 6px;
+    font-variation-settings: "opsz" 24, "SOFT" 70;
+  }
+  .side .cta h4 em { font-style: italic; color: var(--accent); }
+  .side .cta p { color: var(--ink-2); font-size: 13.5px; line-height: 1.55; margin-bottom: 14px; }
+  .side .cta form { display: grid; gap: 10px; }
+  .side .cta input {
+    background: var(--bg); color: var(--ink); border: 1px solid var(--border);
+    border-radius: 8px; padding: 10px 12px; font: inherit; font-size: 13px;
+    outline: none;
+  }
+  .side .cta input:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .side .cta input::placeholder { color: var(--ink-3); }
+  .side .cta button {
+    background: var(--accent); color: var(--on-accent);
+    border-radius: 8px; padding: 10px 14px;
+    font: inherit; font-weight: 500; font-size: 13px;
+  }
+  .side .cta button:hover { background: var(--accent-h); }
+
+  /* On-design banner — quiet, between sections */
+  .design-banner {
+    margin: 56px 0;
+    padding: 32px;
+    background: var(--surface);
+    border-radius: 14px;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 32px; align-items: center;
+  }
+  @media (max-width: 800px) { .design-banner { grid-template-columns: 1fr; padding: 24px; } }
+  .design-banner h3 {
+    font-family: var(--font-display);
+    font-size: 28px; font-weight: 500; line-height: 1.1;
+    letter-spacing: -0.015em;
+    font-variation-settings: "opsz" 36, "SOFT" 70;
+    color: var(--ink);
+  }
+  .design-banner h3 em { font-style: italic; color: var(--accent); }
+  .design-banner p { color: var(--ink-2); font-size: 13.5px; line-height: 1.6; }
+  .design-banner .link {
+    margin-top: 14px; display: inline-block;
+    color: var(--accent); border-bottom: 1px solid var(--accent);
+    padding-bottom: 2px; font-size: 13px;
+  }
+
+  /* Contact band */
+  .contact {
+    padding: 56px 0;
+    margin: 24px 0 32px;
+    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+    text-align: center;
+  }
+  .contact .kicker {
+    color: var(--ink-3); font-size: 13px; margin-bottom: 16px;
+  }
+  .contact h2 {
+    font-family: var(--font-display);
+    font-size: clamp(32px, 5vw, 56px); line-height: 1.05;
+    font-weight: 600; letter-spacing: -0.025em;
+    font-variation-settings: "opsz" 60, "SOFT" 50;
+    color: var(--ink);
+    max-width: 18ch; margin: 0 auto;
+  }
+  .contact h2 em { font-style: italic; color: var(--accent); font-weight: 500; }
+  .contact .email {
+    margin-top: 28px;
+    font-family: var(--font-body); font-size: 18px;
+    color: var(--ink-2);
+  }
+  .contact .email a {
+    color: var(--accent); border-bottom: 2px solid var(--accent); padding-bottom: 3px;
+  }
+  .contact .email a:hover { color: var(--accent-h); }
+  .contact .hand {
+    font-family: var(--font-hand);
+    color: var(--accent); font-size: 24px;
+    transform: rotate(-2deg);
+    display: inline-block;
+    margin-top: 20px;
+  }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <header class="nav">
+    <a href="index.html" class="brand">tiny <i>trauma</i></a>
+    <nav class="nav-links">
+      <a href="musings.html">musings</a>
+      <a href="shorts.html">shorts</a>
+      <a href="about.html" class="active secondary">about</a>
+      <a href="newsletter.html" class="secondary">newsletter</a>
+      <button class="theme-toggle" id="theme-toggle" aria-pressed="true" aria-label="Toggle theme">
+        <span class="dot"></span><span id="theme-label">dark</span>
+      </button>
+    </nav>
+  </header>
+
+  <section class="page-intro">
+    <div class="kicker"><span>about · this place &amp; the person behind it</span></div>
+    <h1>A small <em>introduction.</em></h1>
+    <p class="lede">I'm Amit. <span class="hand-inline">this is where I keep things.</span> Mostly essays. Sometimes fiction. Always small. I started it because I needed somewhere to put the noticing that does not have anywhere else to go.</p>
+  </section>
+
+  <div class="about-grid">
+
+    <!-- MAIN PROSE -->
+    <section class="prose">
+      <p class="lede">A personal blog for people who like sentences more than they like infographics, and who would rather read someone overthink an auto-rickshaw than a productivity system.</p>
+
+      <p>I grew up in a smallish town and now live in Bangalore. I work in software, which means I spend most of my day naming things badly, breaking things politely, and trying to convince smart, slightly tired people that an idea is worth one more week. The writing here is not about any of that.</p>
+
+      <p>The writing here is about <em>noticing</em> — the small moments that don't make a story but don't go away either. The thing the auto-rickshaw driver said. The way my mother asks a question without asking it. The friend I owe a haircut and an apology. The advertisement that cracked me open on a Tuesday for no good reason.</p>
+
+      <p>I am suspicious of advice. I am wary of takes. I am not interested in becoming a brand, and I am still working out, honestly, whether I am interested in becoming a writer or whether I just like the parts of being a writer that involve being alone in a room with a kettle. <em>Both, probably. Neither, also probably.</em></p>
+
+      <h2>How I think about the writing</h2>
+
+      <p>I try to write like I am leaving a note for one person, not a thousand. The voice is dry. The pieces are short on purpose — most of them are written between 11 p.m. and midnight, in one sitting, and edited the next morning over coffee. If a piece needs a research note or a footnote, it goes in the margin or at the bottom, never in the middle of the prose.</p>
+
+      <p>The <a href="musings.html">musings</a> are essays. They argue with themselves. They try not to land where they're expected to. The <a href="shorts.html">shorts</a> are fictions — very small ones, often about people doing slightly strange things, never quite explained. I think the line between the two is thinner than I pretend.</p>
+
+      <p>About once a week, on Sundays, I send one of these out as a newsletter. I read every reply. The interesting ones, with permission, sometimes become the next essay. <em>The angry ones, with no permission, sometimes also become the next essay.</em></p>
+
+      <h2>What this is <em>not</em></h2>
+
+      <p>It is not advice. It is not a self-help project. It is not a journal that I am pretending is a publication, and it is not a publication that I am pretending is a journal. It is not optimised for SEO. There are no affiliate links. There is no course. <em>There will probably never be a course.</em></p>
+
+      <p>If you've read this far, you're already the right kind of reader, and you're welcome to stay as long as you like.</p>
+    </section>
+
+    <!-- SIDEBAR -->
+    <aside class="side">
+      <div class="photo">
+        <span class="ph">author photo · 4:5</span>
+        <span class="scribble">it's me, hi.</span>
+      </div>
+
+      <div>
+        <h3>Amit T</h3>
+        <p class="bio">Engineering-trained, Bangalore-based, slightly literary, occasionally funny. <em>He / him. Replies, mostly.</em></p>
+      </div>
+
+      <div class="facts">
+        <div class="row"><span class="k">writing since</span><span class="v">january 2024</span></div>
+        <div class="row"><span class="k">based in</span><span class="v">bangalore, india</span></div>
+        <div class="row"><span class="k">posts so far</span><span class="v">24 essays · 7 shorts</span></div>
+        <div class="row"><span class="k">cadence</span><span class="v">most sundays, <em>mostly</em></span></div>
+        <div class="row"><span class="k">readers</span><span class="v">1,240 quiet ones</span></div>
+        <div class="row"><span class="k">day job</span><span class="v">software, vaguely</span></div>
+      </div>
+
+      <div class="cta">
+        <h4>get the small things, <em>weekly.</em></h4>
+        <p>one short essay every sunday, sometimes a short fiction on the side. no threads. no tips.</p>
+        <form onsubmit="event.preventDefault();">
+          <input type="email" placeholder="you@somewhere.com" required />
+          <button type="submit">subscribe →</button>
+        </form>
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- DESIGN BANNER -->
+  <section class="design-banner">
+    <div>
+      <h3>About the <em>design.</em></h3>
+      <p>If you care about that sort of thing — yes, the type is Fraunces (variable, optical 9–144) and IBM Plex Mono. The handwriting is Caveat, used very sparingly. The palette is warm cream / soft dark with a single coral accent and a yellow marker. Dark is canonical. There are exactly two drop shadows on the entire site, and one of them is a mistake I haven't found yet.</p>
+      <a class="link" href="#">read the longer note on the design →</a>
+    </div>
+    <div style="font-family: var(--font-hand); color: var(--accent); font-size: 32px; line-height: 1.3; transform: rotate(-2deg); justify-self: start;">
+      ↳ if you spot the second shadow,<br/>email me. I'll buy you chai.
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="contact">
+    <div class="kicker">say hello</div>
+    <h2>Write back, <em>if you want.</em></h2>
+    <p class="email"><a href="mailto:hi@tinytrauma.in">hi@tinytrauma.in</a></p>
+    <span class="hand">I read every email. I reply to most.</span>
+  </section>
+
+  <footer class="colophon">
+    <div>
+      <h4>about the place</h4>
+      <p><strong style="color:var(--ink)">tiny trauma</strong> is a personal blog by Amit T, an engineering-trained Bangalorean who overthinks most things, occasionally to useful effect. Short essays, shorter fictions. Mostly small. Sometimes funny. Always honest.</p>
+      <span class="hand">if you found something here, tell someone.</span>
+    </div>
+    <div class="currently">
+      <h4>currently</h4>
+      <dl>
+        <div>
+          <dt>reading</dt>
+          <dd><em>Cold Enough for Snow</em>, Jessica Au — slowly, on the metro.</dd>
+        </div>
+        <div>
+          <dt>writing</dt>
+          <dd>something about the chai stall man whose name I still don't know.</dd>
+        </div>
+        <div>
+          <dt>noticing</dt>
+          <dd>the dog at the corner has started recognising the auto, not me.</dd>
+        </div>
+      </dl>
+    </div>
+  </footer>
+
+  <div class="elsewhere-strip">
+    <span class="label">find me elsewhere —</span>
+    <a href="#">twitter</a>
+    <a href="#">instagram</a>
+    <a href="#">rss</a>
+    <a href="mailto:hi@tinytrauma.in">hi@tinytrauma.in</a>
+  </div>
+
+  <div class="colophon-base">
+    <span>© 2026 tiny trauma · set in fraunces &amp; ibm plex mono · made in bangalore</span>
+    <span>vol. 02 · issue 19</span>
+  </div>
+
+</div>
+
+<script>
+  const root = document.documentElement;
+  const btn = document.getElementById('theme-toggle');
+  const label = document.getElementById('theme-label');
+  const stored = localStorage.getItem('tt-theme-v3');
+  if (stored === 'light') {
+    root.setAttribute('data-theme', 'light');
+    label.textContent = 'light';
+    btn.setAttribute('aria-pressed', 'false');
+  }
+  btn.addEventListener('click', () => {
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    label.textContent = isDark ? 'light' : 'dark';
+    btn.setAttribute('aria-pressed', String(!isDark));
+    localStorage.setItem('tt-theme-v3', isDark ? 'light' : 'dark');
+  });
+</script>
+</body>
+</html>

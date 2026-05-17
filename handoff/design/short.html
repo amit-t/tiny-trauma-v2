@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>The 3 a.m. cart — Tiny Trauma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,30..100;1,9..144,300..900,30..100&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Caveat:wght@400;500&display=swap" />
+<link rel="stylesheet" href="styles-v3.css" />
+<style>
+  /* Shorts: more atmospheric. Centered column. Big cover-art moment. */
+  .short-head {
+    text-align: center;
+    padding: 56px 0 32px;
+  }
+  .short-head .kicker {
+    color: var(--accent); font-size: 13px;
+    display: inline-flex; gap: 10px; align-items: center;
+    margin-bottom: 24px;
+  }
+  .short-head .kicker .num { color: var(--ink-3); }
+  .short-head h1 {
+    font-family: var(--font-display);
+    font-size: clamp(56px, 9vw, 112px);
+    line-height: 0.92;
+    letter-spacing: -0.04em;
+    font-weight: 800;
+    font-variation-settings: "opsz" 144, "SOFT" 40;
+    color: var(--ink);
+    max-width: 12ch; margin: 0 auto;
+  }
+  .short-head h1 em { font-style: italic; color: var(--accent); font-weight: 700; }
+  .short-head .byline {
+    margin-top: 28px;
+    color: var(--ink-3); font-size: 13px;
+    display: flex; gap: 14px; justify-content: center; align-items: center;
+  }
+  .short-head .byline .sep { color: var(--ink-4); }
+
+  /* Hero art moment for fiction — taller, more cinematic */
+  .short-hero {
+    margin: 24px auto 56px;
+    max-width: 1040px;
+    aspect-ratio: 16/9;
+    background: var(--art-p);
+    border-radius: 14px;
+    position: relative; overflow: hidden;
+  }
+  .short-hero::before {
+    content: ""; position: absolute; inset: 0;
+    background: repeating-linear-gradient(135deg,
+      var(--stripe) 0 18px, transparent 18px 36px);
+  }
+  .short-hero .ph {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--ink-3); font-size: 13px;
+    background: rgba(0,0,0,0.4); padding: 8px 16px; border-radius: 4px;
+    font-family: var(--font-body);
+  }
+  [data-theme="light"] .short-hero .ph { background: rgba(20,17,12,0.18); color: var(--ink-2); }
+  .short-hero .corner {
+    position: absolute; right: 24px; top: 24px;
+    font-family: var(--font-hand);
+    color: var(--accent); font-size: 28px;
+    transform: rotate(6deg);
+  }
+
+  .short-body {
+    max-width: 38rem; margin: 0 auto;
+    font-family: var(--font-body);
+    font-size: 15.5px; line-height: 1.78;
+    color: var(--ink);
+  }
+  .short-body p + p { margin-top: 16px; }
+  .short-body p:first-of-type::first-letter {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 4em; line-height: 0.85;
+    float: left;
+    padding: 0.06em 0.12em 0 0;
+    color: var(--accent);
+    font-variation-settings: "opsz" 144, "SOFT" 40;
+  }
+  .short-body em { font-style: italic; color: var(--ink); }
+  .short-body .dingbat {
+    text-align: center; margin: 32px 0;
+    color: var(--ink-3); font-family: var(--font-display);
+    font-size: 22px; font-style: italic;
+    letter-spacing: 0.3em;
+  }
+  .short-body .end {
+    text-align: center; margin: 40px 0 16px;
+    font-family: var(--font-display); font-style: italic;
+    color: var(--ink-3); font-size: 18px;
+  }
+
+  /* Number ribbon at edge */
+  .ribbon {
+    position: absolute; top: 0; right: 0; bottom: 0;
+    width: 1px; background: var(--rule);
+  }
+
+  /* Post-short row */
+  .after {
+    max-width: 38rem; margin: 24px auto 48px;
+    padding-top: 24px; border-top: 1px solid var(--rule);
+    color: var(--ink-3); font-size: 13px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
+  }
+  .after .left .by { color: var(--ink-2); }
+  .after .actions { display: flex; gap: 10px; }
+  .after .actions a {
+    color: var(--ink-2); border: 1px solid var(--border);
+    padding: 5px 12px; border-radius: 999px; font-size: 12.5px;
+  }
+  .after .actions a:hover { color: var(--ink); border-color: var(--ink-3); }
+
+  /* Aside (Caveat) at the end — feels like a hand-scribbled afterthought */
+  .afterthought {
+    max-width: 38rem; margin: 0 auto 48px;
+    padding: 24px 0;
+  }
+  .afterthought .label {
+    color: var(--ink-3); font-size: 12.5px;
+    margin-bottom: 8px;
+  }
+  .afterthought .text {
+    font-family: var(--font-hand);
+    color: var(--accent); font-size: 24px;
+    line-height: 1.35;
+    transform: rotate(-1deg);
+    display: inline-block; max-width: 36ch;
+  }
+
+  /* Prev/Next — small, item-style, centered */
+  .pn-short {
+    max-width: 720px; margin: 16px auto 48px;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 24px;
+  }
+  @media (max-width: 700px) { .pn-short { grid-template-columns: 1fr; } }
+  .pn-short a {
+    display: block; padding: 20px;
+    border: 1px solid var(--border); border-radius: 10px;
+    color: var(--ink);
+    transition: border-color var(--dur-1) var(--ease), background var(--dur-1) var(--ease);
+  }
+  .pn-short a:hover { border-color: var(--ink-3); background: var(--surface); }
+  .pn-short .dir { color: var(--ink-3); font-size: 12px; margin-bottom: 8px; }
+  .pn-short h4 {
+    font-family: var(--font-display); font-weight: 500;
+    font-size: 18px; line-height: 1.2; letter-spacing: -0.01em;
+    font-variation-settings: "opsz" 24, "SOFT" 70;
+  }
+  .pn-short h4 em { font-style: italic; color: var(--ink-2); }
+  .pn-short .next { text-align: right; }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <header class="nav">
+    <a href="index.html" class="brand">tiny <i>trauma</i></a>
+    <nav class="nav-links">
+      <a href="musings.html">musings</a>
+      <a href="shorts.html" class="active">shorts</a>
+      <a href="about.html" class="secondary">about</a>
+      <a href="newsletter.html" class="secondary">newsletter</a>
+      <button class="theme-toggle" id="theme-toggle" aria-pressed="true" aria-label="Toggle theme">
+        <span class="dot"></span><span id="theme-label">dark</span>
+      </button>
+    </nav>
+  </header>
+
+  <header class="short-head">
+    <div class="kicker"><span>● short fiction</span><span class="num">№ 007</span></div>
+    <h1>The 3 a.m. <em>cart.</em></h1>
+    <div class="byline">
+      <span>by Amit T</span>
+      <span class="sep">·</span>
+      <span>may 09, 2026</span>
+      <span class="sep">·</span>
+      <span>~ 800 words</span>
+    </div>
+  </header>
+
+  <div class="short-hero">
+    <span class="ph">cover illustration · 16:9</span>
+    <span class="corner">↘</span>
+  </div>
+
+  <section class="short-body">
+
+    <p>The first thing he added to the cart was a single banana. He did not need a banana. He had a banana already, in the fruit bowl, which he had been intending to eat for two days. It was 3:14 a.m. and the apartment was the kind of quiet that has its own colour.</p>
+
+    <p>The second thing he added was a stainless-steel kettle, the kind with the small whistle his mother had owned and which he had never inherited. He did not have kettles on his mind. The kettle had been suggested to him by the site, with what he felt was a faint air of accusation.</p>
+
+    <p>By the time he was on the fourteenth item — a French press, a paper-leaf calendar for next year, a set of three small ceramic bowls — he understood that he was not going to check out. He had never been going to check out. The cart was not, in fact, a cart. The cart was a list. The list was, he saw, a kind of confession he had not realised he was making.</p>
+
+    <div class="dingbat">·   ·   ·</div>
+
+    <p>He began removing things. The banana, first. The kettle, with some difficulty. The French press, easily. The ceramic bowls, only after he had imagined them, briefly, sitting on a small wooden table he did not own, in a flat he did not live in, in a city he had been thinking, lately, of moving to.</p>
+
+    <p>The cart, after he had finished, contained one item. He had not added it. He did not recognise it. It was a single hardcover copy of a novel he had not, technically, ever read but which his ex-wife had read out loud to him, once, in 2018, on a train.</p>
+
+    <p>He stared at the screen. The cart updated. A note, small, polite, appeared underneath the book: <em>“you may also like.”</em> Below that, the kettle returned.</p>
+
+    <div class="dingbat">·   ·   ·</div>
+
+    <p>By 4 a.m. the cart contained twenty-three items, none of which he had added. He removed them, one by one. The site, with no visible delay, added each one back. It was not aggressive about it. There was no pop-up. There was no notification. There was only the quiet, attentive return of the kettle, the bowls, the French press, the book.</p>
+
+    <p>He sat in the chair for a long time. The kettle stayed in the cart. The kettle had decided to stay in the cart. He could feel, dimly, that some kind of disagreement was being conducted between him and the kettle, mediated by a third party which did not have his interests at heart, but which had, he had to admit, paid attention.</p>
+
+    <p>He clicked, finally, on the kettle's image. The page loaded slowly, for a 3 a.m. page. The kettle, in the photograph, was sitting on a small wooden table he did not own, in a flat he did not live in, in a city he had been thinking, lately, of moving to.</p>
+
+    <p>The cart waited. He waited with it. <em>Outside, the dawn began, very slowly, to suggest itself.</em></p>
+
+    <div class="end">— fin.</div>
+
+  </section>
+
+  <div class="afterthought">
+    <div class="label">a small afterthought, from the author:</div>
+    <div class="text">↳ this one came out of a real cart. the kettle is real. the city, also.</div>
+  </div>
+
+  <div class="after">
+    <div class="left">
+      <span class="by">by Amit T · short no. 007</span>
+    </div>
+    <div class="actions">
+      <a href="#">copy link</a>
+      <a href="#">share</a>
+      <a href="#">forward</a>
+    </div>
+  </div>
+
+  <nav class="pn-short">
+    <a href="short.html">
+      <div class="dir">← previous short · no. 006</div>
+      <h4>The man who returned <em>all</em> the books</h4>
+    </a>
+    <a href="shorts.html" class="next">
+      <div class="dir">all shorts →</div>
+      <h4>Back to the <em>library</em></h4>
+    </a>
+  </nav>
+
+  <footer class="colophon">
+    <div>
+      <h4>about the place</h4>
+      <p><strong style="color:var(--ink)">tiny trauma</strong> is a personal blog by Amit T, an engineering-trained Bangalorean who overthinks most things, occasionally to useful effect. Short essays, shorter fictions. Mostly small. Sometimes funny. Always honest.</p>
+      <span class="hand">if you found something here, tell someone.</span>
+    </div>
+    <div class="currently">
+      <h4>currently</h4>
+      <dl>
+        <div>
+          <dt>reading</dt>
+          <dd><em>Cold Enough for Snow</em>, Jessica Au — slowly, on the metro.</dd>
+        </div>
+        <div>
+          <dt>writing</dt>
+          <dd>something about the chai stall man whose name I still don't know.</dd>
+        </div>
+        <div>
+          <dt>noticing</dt>
+          <dd>the dog at the corner has started recognising the auto, not me.</dd>
+        </div>
+      </dl>
+    </div>
+  </footer>
+
+  <div class="elsewhere-strip">
+    <span class="label">find me elsewhere —</span>
+    <a href="#">twitter</a>
+    <a href="#">instagram</a>
+    <a href="#">rss</a>
+    <a href="mailto:hi@tinytrauma.in">hi@tinytrauma.in</a>
+  </div>
+
+  <div class="colophon-base">
+    <span>© 2026 tiny trauma · set in fraunces &amp; ibm plex mono · made in bangalore</span>
+    <span>vol. 02 · issue 19</span>
+  </div>
+
+</div>
+
+<script>
+  const root = document.documentElement;
+  const btn = document.getElementById('theme-toggle');
+  const label = document.getElementById('theme-label');
+  const stored = localStorage.getItem('tt-theme-v3');
+  if (stored === 'light') {
+    root.setAttribute('data-theme', 'light');
+    label.textContent = 'light';
+    btn.setAttribute('aria-pressed', 'false');
+  }
+  btn.addEventListener('click', () => {
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    label.textContent = isDark ? 'light' : 'dark';
+    btn.setAttribute('aria-pressed', String(!isDark));
+    localStorage.setItem('tt-theme-v3', isDark ? 'light' : 'dark');
+  });
+</script>
+</body>
+</html>

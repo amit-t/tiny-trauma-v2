@@ -1,0 +1,426 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Newsletter — Tiny Trauma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,30..100;1,9..144,300..900,30..100&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Caveat:wght@400;500&display=swap" />
+<link rel="stylesheet" href="styles-v3.css" />
+<style>
+  /* Big subscribe card */
+  .subscribe-card {
+    margin: 24px 0 64px;
+    padding: 56px;
+    background: var(--surface);
+    border-radius: 18px;
+    position: relative; overflow: hidden;
+    display: grid; grid-template-columns: 1.1fr 1fr;
+    gap: 56px; align-items: center;
+  }
+  @media (max-width: 800px) { .subscribe-card { grid-template-columns: 1fr; padding: 32px 24px; gap: 28px; } }
+  .subscribe-card::after {
+    content: ""; position: absolute;
+    width: 360px; height: 360px; right: -90px; top: -80px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--accent) 0%, transparent 70%);
+    opacity: 0.16; pointer-events: none;
+  }
+  .subscribe-card h2 {
+    font-family: var(--font-display);
+    font-size: clamp(38px, 5vw, 56px);
+    line-height: 0.98;
+    letter-spacing: -0.03em; font-weight: 700;
+    font-variation-settings: "opsz" 90, "SOFT" 50;
+    max-width: 14ch; color: var(--ink);
+  }
+  .subscribe-card h2 em { font-style: italic; color: var(--accent); font-weight: 600; }
+  .subscribe-card .pitch {
+    color: var(--ink-2); font-size: 14.5px; line-height: 1.6;
+    margin-top: 18px; max-width: 36ch;
+  }
+  .subscribe-card form { display: grid; gap: 12px; }
+  .subscribe-card .row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 600px) { .subscribe-card .row { grid-template-columns: 1fr; } }
+  .subscribe-card input {
+    font: inherit; background: var(--bg); color: var(--ink);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 14px; outline: none;
+    transition: border-color var(--dur-1) var(--ease);
+  }
+  .subscribe-card input:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+  .subscribe-card input::placeholder { color: var(--ink-3); }
+  .subscribe-card .tiers {
+    display: flex; gap: 8px; margin-top: 4px; flex-wrap: wrap;
+  }
+  .subscribe-card .tier-pick {
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 6px 12px; color: var(--ink-2); font-size: 12.5px;
+    cursor: pointer; transition: all var(--dur-1) var(--ease);
+  }
+  .subscribe-card .tier-pick.on { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .subscribe-card .tier-pick:hover { color: var(--ink); border-color: var(--ink-3); }
+  .subscribe-card button {
+    background: var(--accent); color: var(--on-accent);
+    border-radius: 8px; padding: 14px 22px;
+    font: inherit; font-weight: 500; font-size: 14px;
+    justify-self: start; transition: background var(--dur-1) var(--ease);
+  }
+  .subscribe-card button:hover { background: var(--accent-h); }
+  .subscribe-card .small {
+    color: var(--ink-3); font-size: 12.5px; margin-top: 4px;
+  }
+
+  /* What you'll get — 3 cards */
+  .what {
+    margin: 24px 0 64px;
+  }
+  .what-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;
+    margin-top: 32px;
+  }
+  @media (max-width: 800px) { .what-grid { grid-template-columns: 1fr; gap: 24px; } }
+  .what-card {
+    padding: 28px;
+    border: 1px solid var(--border); border-radius: 14px;
+    display: grid; gap: 14px;
+  }
+  .what-card .glyph {
+    font-family: var(--font-display); font-size: 32px;
+    color: var(--accent); font-style: italic;
+    line-height: 1;
+    font-variation-settings: "opsz" 36, "SOFT" 70;
+  }
+  .what-card h3 {
+    font-family: var(--font-display);
+    font-size: 22px; font-weight: 500;
+    letter-spacing: -0.01em;
+    font-variation-settings: "opsz" 30, "SOFT" 70;
+    color: var(--ink);
+  }
+  .what-card h3 em { font-style: italic; color: var(--ink-2); }
+  .what-card p { color: var(--ink-2); font-size: 14px; line-height: 1.6; }
+  .what-card .meta { color: var(--ink-3); font-size: 12.5px; }
+
+  /* Past issues preview */
+  .past {
+    margin: 16px 0 64px;
+  }
+  .past-list { display: grid; gap: 4px; margin-top: 28px; }
+  .past-item {
+    display: grid; grid-template-columns: 5.5rem 1fr 7rem;
+    gap: 20px; align-items: baseline;
+    padding: 18px 0; border-bottom: 1px solid var(--rule);
+    transition: background var(--dur-1) var(--ease);
+  }
+  @media (max-width: 700px) {
+    .past-item { grid-template-columns: 1fr; gap: 4px; }
+  }
+  .past-item:hover { background: rgba(245, 220, 184, 0.018); }
+  [data-theme="light"] .past-item:hover { background: rgba(20,17,12,0.022); }
+  .past-item .when {
+    color: var(--ink-3); font-size: 13px;
+  }
+  .past-item .when .num { display: block; color: var(--ink-4); font-size: 11.5px; margin-bottom: 2px; }
+  .past-item h4 {
+    font-family: var(--font-display);
+    font-size: 20px; line-height: 1.2; font-weight: 500;
+    letter-spacing: -0.012em;
+    font-variation-settings: "opsz" 28, "SOFT" 70;
+  }
+  .past-item h4 a { color: var(--ink); }
+  .past-item h4 a:hover { color: var(--accent); }
+  .past-item h4 em { font-style: italic; color: var(--ink-2); font-weight: 400; }
+  .past-item .summary { color: var(--ink-2); font-size: 13px; line-height: 1.55; margin-top: 4px; max-width: 56ch;}
+  .past-item .stat {
+    text-align: right; color: var(--ink-3); font-size: 12.5px;
+  }
+  @media (max-width: 700px) { .past-item .stat { text-align: left; } }
+
+  /* FAQ */
+  .faq {
+    margin: 16px 0 64px;
+  }
+  .faq-grid { margin-top: 28px; display: grid; gap: 4px; }
+  .faq-item {
+    padding: 22px 0;
+    border-bottom: 1px solid var(--rule);
+    display: grid; grid-template-columns: 1fr 2fr; gap: 32px;
+  }
+  @media (max-width: 700px) { .faq-item { grid-template-columns: 1fr; gap: 8px; } }
+  .faq-item .q {
+    font-family: var(--font-display);
+    font-size: 19px; line-height: 1.3;
+    font-weight: 500; letter-spacing: -0.005em;
+    color: var(--ink);
+    font-variation-settings: "opsz" 24, "SOFT" 70;
+  }
+  .faq-item .q em { font-style: italic; color: var(--ink-2); }
+  .faq-item .a { color: var(--ink-2); font-size: 14px; line-height: 1.7; }
+  .faq-item .a em { font-style: italic; color: var(--ink); }
+  .faq-item .a a { color: var(--accent); border-bottom: 1px solid currentColor; }
+  .faq-item .a a:hover { color: var(--accent-h); }
+
+  /* Section heading shared on this page */
+  .sect-h {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    font-variation-settings: "opsz" 48, "SOFT" 50;
+    color: var(--ink);
+  }
+  .sect-h em { font-style: italic; color: var(--accent); font-weight: 500; }
+  .sect-h-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    padding-bottom: 20px; border-bottom: 1px solid var(--rule);
+  }
+  .sect-h-row .aside {
+    color: var(--ink-3); font-size: 13px;
+  }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <header class="nav">
+    <a href="index.html" class="brand">tiny <i>trauma</i></a>
+    <nav class="nav-links">
+      <a href="musings.html">musings</a>
+      <a href="shorts.html">shorts</a>
+      <a href="about.html" class="secondary">about</a>
+      <a href="newsletter.html" class="active secondary">newsletter</a>
+      <button class="theme-toggle" id="theme-toggle" aria-pressed="true" aria-label="Toggle theme">
+        <span class="dot"></span><span id="theme-label">dark</span>
+      </button>
+    </nav>
+  </header>
+
+  <section class="page-intro">
+    <div class="kicker"><span>newsletter · sundays · since jan 2024</span></div>
+    <h1>Sunday <em>letters.</em></h1>
+    <p class="lede">One short essay, in your inbox, most Sundays. Sometimes a short fiction on the side. <span class="hand-inline">no threads, no tips, mostly.</span> Designed to be read with the second cup of coffee, before the day asks for anything.</p>
+  </section>
+
+  <!-- BIG SUBSCRIBE -->
+  <section class="subscribe-card">
+    <div>
+      <h2>Get the small things, <em>weekly.</em></h2>
+      <p class="pitch">1,240 quiet readers. No spam. Unsubscribe in one click. I read every reply — even the angry ones, especially the angry ones.</p>
+    </div>
+    <form onsubmit="event.preventDefault();">
+      <div class="row">
+        <input type="text" placeholder="first name" required />
+        <input type="email" placeholder="you@somewhere.com" required />
+      </div>
+      <div class="tiers">
+        <span class="tier-pick on">weekly · free</span>
+        <span class="tier-pick">monthly · free</span>
+        <span class="tier-pick">both · free</span>
+      </div>
+      <button type="submit">subscribe →</button>
+      <p class="small">it's all free. there will probably never be a paid tier. <em>probably.</em></p>
+    </form>
+  </section>
+
+  <!-- WHAT YOU'LL GET -->
+  <section class="what">
+    <div class="sect-h-row" style="margin-bottom: 0;">
+      <h2 class="sect-h">What lands in your <em>inbox.</em></h2>
+      <span class="aside">three things, mostly</span>
+    </div>
+    <div class="what-grid">
+      <div class="what-card">
+        <span class="glyph">①</span>
+        <h3>One <em>musing.</em></h3>
+        <p>A short essay, 600–1,200 words. About the dad in the noodle commercial, or the auto-rickshaw, or the friend I owe a haircut. Written between 11 p.m. and midnight, edited Sunday morning over coffee.</p>
+        <span class="meta">every sunday · ~ 4 min read</span>
+      </div>
+      <div class="what-card">
+        <span class="glyph">②</span>
+        <h3>A small <em>fiction</em>, sometimes.</h3>
+        <p>About once a month, a short fiction joins the essay — a few hundred words about someone doing something slightly strange. Often unresolved. Always unexplained.</p>
+        <span class="meta">~ monthly · ~ 5 min read</span>
+      </div>
+      <div class="what-card">
+        <span class="glyph">③</span>
+        <h3>One <em>footnote.</em></h3>
+        <p>A single line at the bottom of the email — what I'm reading, what I'm writing, what I'm avoiding. Three sentences total. <em>The currently strip, but earlier.</em></p>
+        <span class="meta">every sunday · 10 seconds</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAST ISSUES -->
+  <section class="past">
+    <div class="sect-h-row" style="margin-bottom: 0;">
+      <h2 class="sect-h">Past <em>letters.</em></h2>
+      <a href="musings.html" class="aside" style="color: var(--ink-2); border-bottom: 1px solid var(--border); padding-bottom: 2px;">browse the full archive →</a>
+    </div>
+    <div class="past-list">
+
+      <article class="past-item">
+        <div class="when"><span class="num">№ 023</span>may 12</div>
+        <div>
+          <h4><a href="musing.html">Why I cry at ads but not at things <em>that matter</em></a></h4>
+          <p class="summary">A theory about distance, another about shame, and an apology that arrived eight weeks too late.</p>
+        </div>
+        <div class="stat">1,240 opens</div>
+      </article>
+
+      <article class="past-item">
+        <div class="when"><span class="num">№ 022</span>may 04</div>
+        <div>
+          <h4><a href="musing.html">On leaving messages on <em>read</em></a></h4>
+          <p class="summary">Forty-one unanswered texts. Not avoiding. Not <em>not</em> avoiding. The philosophy of <em>maybe</em>, applied to friendship.</p>
+        </div>
+        <div class="stat">1,198 opens</div>
+      </article>
+
+      <article class="past-item">
+        <div class="when"><span class="num">№ 021</span>apr 27</div>
+        <div>
+          <h4><a href="musing.html">Bangalore auto and the philosophy of <em>maybe</em></a></h4>
+          <p class="summary">The 8:47 auto-rickshaw didn't really say no, but it didn't say yes either, and somewhere inside that ambiguity I had to live.</p>
+        </div>
+        <div class="stat">1,322 opens</div>
+      </article>
+
+      <article class="past-item">
+        <div class="when"><span class="num">№ 020</span>apr 18</div>
+        <div>
+          <h4><a href="musing.html">The autocorrect <em>gaslighter</em></a></h4>
+          <p class="summary">My phone has been telling me my own name is wrong for three years. I keep correcting it. It keeps correcting me back.</p>
+        </div>
+        <div class="stat">1,156 opens</div>
+      </article>
+
+      <article class="past-item">
+        <div class="when"><span class="num">№ 019</span>apr 09</div>
+        <div>
+          <h4><a href="musing.html">I have been performing <em>competence</em> for fourteen years</a></h4>
+          <p class="summary">There is a version of me in meetings who knows what he is doing. I do not know him. I keep him alive for the household.</p>
+        </div>
+        <div class="stat">1,408 opens</div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq">
+    <div class="sect-h-row" style="margin-bottom: 0;">
+      <h2 class="sect-h">The <em>small</em> questions.</h2>
+      <span class="aside">five quick answers</span>
+    </div>
+    <div class="faq-grid">
+
+      <div class="faq-item">
+        <div class="q">How often do you send it, <em>actually</em>?</div>
+        <div class="a">Most Sundays since January 2024. I have missed three weeks in two years — once for a death, once for a flu, once because I couldn't get the ending right and refused to send a piece I didn't believe in. <em>I am proudest of the third one.</em></div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">Is there a paid tier?</div>
+        <div class="a">No. There will probably never be a paid tier. If there ever is, the free essays will keep being free. The voice doesn't change at the paywall, and I am not interested in the kind of writing that would change at one.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">What do you do with my <em>email address</em>?</div>
+        <div class="a">I put it in <a href="#">a quiet self-hosted list</a>, send you the essay, and never give it to anyone else. No analytics pixels. No referral programs. No third-party anything. Unsubscribe is one click and works the first time.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">Will you read my reply?</div>
+        <div class="a"><em>Yes.</em> Every one. Usually within a week. Sometimes within a month, if it's a hard one. The interesting replies, with permission, become the next essay. I have written four essays this year that started as a reader's reply.</div>
+      </div>
+
+      <div class="faq-item">
+        <div class="q">Can I forward an essay to someone?</div>
+        <div class="a">Please do. The handwritten line at the bottom of every essay — <em>“if you found something here, tell someone”</em> — is not decorative. Forwarding is how this place grows. Tell someone.</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- TINY FINAL CTA -->
+  <section style="text-align: center; padding: 56px 0 24px; border-top: 1px solid var(--rule); margin-top: 24px;">
+    <div class="hand" style="font-family: var(--font-hand); color: var(--accent); font-size: 28px; transform: rotate(-2deg); display: inline-block; margin-bottom: 16px;">↳ one more time, for the road —</div>
+    <h2 style="font-family: var(--font-display); font-size: clamp(36px, 5vw, 56px); line-height: 1.0; font-weight: 700; letter-spacing: -0.03em; font-variation-settings: 'opsz' 60, 'SOFT' 50; color: var(--ink); max-width: 16ch; margin: 0 auto;">
+      get the <em>small</em> things, weekly.
+    </h2>
+    <form onsubmit="event.preventDefault();" style="margin: 28px auto 0; display: flex; flex-wrap: wrap; gap: 8px; max-width: 480px; padding: 0 16px;">
+      <input type="email" placeholder="you@somewhere.com" required style="flex: 1 1 200px; font: inherit; background: var(--bg); color: var(--ink); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; outline: none;" />
+      <button type="submit" style="background: var(--accent); color: var(--on-accent); border-radius: 8px; padding: 12px 20px; font: inherit; font-weight: 500; font-size: 14px; border: 0; cursor: pointer;">subscribe →</button>
+    </form>
+    <p style="color: var(--ink-3); font-size: 12.5px; margin-top: 12px;">no spam · unsubscribe in one click · I read every reply.</p>
+  </section>
+
+  <footer class="colophon">
+    <div>
+      <h4>about the place</h4>
+      <p><strong style="color:var(--ink)">tiny trauma</strong> is a personal blog by Amit T, an engineering-trained Bangalorean who overthinks most things, occasionally to useful effect. Short essays, shorter fictions. Mostly small. Sometimes funny. Always honest.</p>
+      <span class="hand">if you found something here, tell someone.</span>
+    </div>
+    <div class="currently">
+      <h4>currently</h4>
+      <dl>
+        <div>
+          <dt>reading</dt>
+          <dd><em>Cold Enough for Snow</em>, Jessica Au — slowly, on the metro.</dd>
+        </div>
+        <div>
+          <dt>writing</dt>
+          <dd>something about the chai stall man whose name I still don't know.</dd>
+        </div>
+        <div>
+          <dt>noticing</dt>
+          <dd>the dog at the corner has started recognising the auto, not me.</dd>
+        </div>
+      </dl>
+    </div>
+  </footer>
+
+  <div class="elsewhere-strip">
+    <span class="label">find me elsewhere —</span>
+    <a href="#">twitter</a>
+    <a href="#">instagram</a>
+    <a href="#">rss</a>
+    <a href="mailto:hi@tinytrauma.in">hi@tinytrauma.in</a>
+  </div>
+
+  <div class="colophon-base">
+    <span>© 2026 tiny trauma · set in fraunces &amp; ibm plex mono · made in bangalore</span>
+    <span>vol. 02 · issue 19</span>
+  </div>
+
+</div>
+
+<script>
+  const root = document.documentElement;
+  const btn = document.getElementById('theme-toggle');
+  const label = document.getElementById('theme-label');
+  const stored = localStorage.getItem('tt-theme-v3');
+  if (stored === 'light') {
+    root.setAttribute('data-theme', 'light');
+    label.textContent = 'light';
+    btn.setAttribute('aria-pressed', 'false');
+  }
+  btn.addEventListener('click', () => {
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    label.textContent = isDark ? 'light' : 'dark';
+    btn.setAttribute('aria-pressed', String(!isDark));
+    localStorage.setItem('tt-theme-v3', isDark ? 'light' : 'dark');
+  });
+  document.querySelectorAll('.tier-pick').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tier-pick').forEach(x => x.classList.remove('on'));
+      t.classList.add('on');
+    });
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Musings — Tiny Trauma</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,300..900,30..100;1,9..144,300..900,30..100&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,400&family=Caveat:wght@400;500&display=swap" />
+<link rel="stylesheet" href="styles-v3.css" />
+<style>
+  .page-intro h1 em { font-style: italic; color: var(--accent); font-weight: 600; }
+  .page-intro .lede em { color: var(--ink); font-style: italic; }
+
+  .toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 24px; flex-wrap: wrap;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 32px;
+  }
+  .toolbar .count { color: var(--ink-3); font-size: 13.5px; }
+  .toolbar .sort {
+    display: flex; align-items: center; gap: 12px;
+    color: var(--ink-3); font-size: 13px;
+  }
+  .toolbar .sort select {
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 999px; padding: 6px 28px 6px 12px;
+    color: var(--ink); font: inherit; font-size: 13px;
+    appearance: none;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23847B6A' stroke-width='1.4' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat: no-repeat; background-position: right 10px center;
+    cursor: pointer;
+  }
+
+  /* Pinned editor's pick */
+  .pick {
+    display: grid; grid-template-columns: 1.1fr 1fr;
+    gap: 40px; align-items: center;
+    padding: 32px;
+    background: var(--surface);
+    border-radius: 16px;
+    margin-bottom: 48px;
+    position: relative;
+  }
+  @media (max-width: 800px) { .pick { grid-template-columns: 1fr; padding: 24px; } }
+  .pick .art-slot { aspect-ratio: 4/3; }
+  .pick .kicker {
+    color: var(--accent); font-size: 13px; margin-bottom: 14px;
+    display: flex; gap: 8px; align-items: center;
+  }
+  .pick h2 {
+    font-family: var(--font-display);
+    font-size: 40px; line-height: 1.0;
+    letter-spacing: -0.025em; font-weight: 600;
+    font-variation-settings: "opsz" 60, "SOFT" 50;
+    color: var(--ink);
+  }
+  .pick h2 em { font-style: italic; color: var(--accent); font-weight: 500; }
+  .pick h2 a { color: inherit; }
+  .pick .dek {
+    color: var(--ink-2); font-size: 14.5px; line-height: 1.6;
+    margin-top: 14px; max-width: 40ch;
+  }
+  .pick .by {
+    color: var(--ink-3); font-size: 12.5px;
+    margin-top: 18px; display: flex; gap: 10px;
+  }
+  .pick .by .sep { color: var(--ink-4); }
+  .pick .by .chips { margin-left: auto; display: flex; gap: 6px; }
+
+  /* River — denser than the home grid; one per row */
+  .river { display: grid; gap: 8px; }
+  .river-item {
+    display: grid;
+    grid-template-columns: 7rem 1fr 8rem;
+    gap: 28px; align-items: start;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--rule);
+    transition: background var(--dur-1) var(--ease);
+  }
+  .river-item:hover { background: rgba(245, 220, 184, 0.018); }
+  [data-theme="light"] .river-item:hover { background: rgba(20,17,12,0.022); }
+  @media (max-width: 700px) {
+    .river-item { grid-template-columns: 1fr; gap: 8px; }
+    .river-item .when { order: -1; }
+    .river-item .right { flex-direction: row; align-items: center; gap: 12px; margin-top: 4px; }
+  }
+  .river-item .when {
+    color: var(--ink-3); font-size: 13px;
+  }
+  .river-item .when .num {
+    display: block; color: var(--ink-4); font-size: 11.5px; margin-bottom: 2px;
+  }
+  .river-item .mid h3 {
+    font-family: var(--font-display);
+    font-size: 24px; line-height: 1.18; font-weight: 500;
+    letter-spacing: -0.012em;
+    font-variation-settings: "opsz" 32, "SOFT" 70;
+  }
+  .river-item .mid h3 a {
+    color: var(--ink);
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size var(--dur-2) var(--ease), color var(--dur-1) var(--ease);
+  }
+  .river-item .mid h3 a:hover { background-size: 100% 1px; color: var(--ink); }
+  .river-item .mid h3 em { font-style: italic; color: var(--ink-2); font-weight: 400; }
+  .river-item .mid .dek {
+    color: var(--ink-2); font-size: 14px; line-height: 1.55;
+    margin-top: 8px; max-width: 60ch;
+  }
+  .river-item .mid .chips { display: flex; gap: 6px; margin-top: 10px; }
+  .river-item .right {
+    display: flex; flex-direction: column; align-items: flex-end;
+    color: var(--ink-3); font-size: 12.5px; gap: 6px;
+  }
+  @media (max-width: 700px) {
+    .river-item .right { flex-direction: row; align-items: center; gap: 12px; }
+  }
+  /* River-item right column reorder removed above; default order is fine */
+  .river-item .right .reads { color: var(--ink-2); }
+
+  /* Year separator */
+  .year-sep {
+    display: grid; grid-template-columns: 7rem 1fr; gap: 28px;
+    align-items: center;
+    margin: 32px 0 16px;
+  }
+  @media (max-width: 700px) { .year-sep { grid-template-columns: 1fr; } }
+  .year-sep .y {
+    font-family: var(--font-display);
+    font-size: 24px; font-weight: 500;
+    font-variation-settings: "opsz" 36, "SOFT" 70;
+    letter-spacing: -0.015em;
+    color: var(--ink-2);
+  }
+  .year-sep .y em { font-style: italic; color: var(--ink-3); font-weight: 400; }
+  .year-sep .rule {
+    height: 1px; background: var(--rule);
+  }
+
+  /* Pagination */
+  .pager {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 32px 0 56px;
+    color: var(--ink-3); font-size: 13px;
+    border-top: 1px solid var(--rule);
+    margin-top: 16px;
+  }
+  .pager .pages { display: flex; gap: 4px; }
+  .pager .pages a, .pager .pages span {
+    padding: 6px 10px; border-radius: 6px; color: var(--ink-2); cursor: pointer;
+  }
+  .pager .pages a:hover { background: var(--surface); color: var(--ink); }
+  .pager .pages a.active { color: var(--ink); }
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <!-- NAV -->
+  <header class="nav">
+    <a href="index.html" class="brand">tiny <i>trauma</i></a>
+    <nav class="nav-links">
+      <a href="musings.html" class="active">musings</a>
+      <a href="shorts.html">shorts</a>
+      <a href="about.html" class="secondary">about</a>
+      <a href="newsletter.html" class="secondary">newsletter</a>
+      <button class="theme-toggle" id="theme-toggle" aria-pressed="true" aria-label="Toggle theme">
+        <span class="dot"></span><span id="theme-label">dark</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- INTRO -->
+  <section class="page-intro">
+    <div class="kicker"><span>musings · 24 essays · since jan 2024</span></div>
+    <h1>Notes from <em>noticing.</em></h1>
+    <p class="lede">Short essays about <span class="hand-inline">the small daily friction</span> — the stuff that isn't dramatic enough to make a story but isn't quiet enough to forget. Read in order, or pick a tag and tumble down.</p>
+  </section>
+
+  <!-- FILTERS -->
+  <div class="filters">
+    <button class="filter active">all<span class="count">24</span></button>
+    <button class="filter">grief<span class="count">5</span></button>
+    <button class="filter">phones<span class="count">7</span></button>
+    <button class="filter">bangalore<span class="count">9</span></button>
+    <button class="filter">small humiliations<span class="count">11</span></button>
+    <button class="filter">love<span class="count">3</span></button>
+    <button class="filter">family<span class="count">4</span></button>
+    <button class="filter">competence<span class="count">2</span></button>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <div class="count"><strong style="color:var(--ink)">24</strong> essays · filtered by <em>all</em></div>
+    <div class="sort">
+      sort by
+      <select>
+        <option>newest first</option>
+        <option>oldest first</option>
+        <option>shortest first</option>
+        <option>longest first</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- EDITOR'S PICK -->
+  <article class="pick">
+    <div>
+      <div class="kicker"><span>● editor's pick · the one I'd start with</span></div>
+      <h2><a href="musing.html">Why I cry at ads but not at things <em>that matter</em></a></h2>
+      <p class="dek">It's the dad in the noodle commercial. It's the dog reunited with the soldier. It's never the friend's actual divorce. A theory about distance, another about shame, and an apology that arrived eight weeks too late.</p>
+      <div class="by">
+        <span>may 12, 2026</span><span class="sep">·</span><span>4 min read</span>
+        <span class="chips"><span class="chip l">musing</span><span class="chip s">grief</span></span>
+      </div>
+    </div>
+    <div class="art-slot" style="background: var(--art-s);"><span class="ph">illustration · 4:3</span></div>
+  </article>
+
+  <!-- YEAR SEPARATOR -->
+  <div class="year-sep">
+    <div class="y">2026 <em>so far</em></div>
+    <div class="rule"></div>
+  </div>
+
+  <!-- RIVER -->
+  <section class="river">
+
+    <article class="river-item">
+      <div class="when"><span class="num">№ 022</span>may 04</div>
+      <div class="mid">
+        <h3><a href="musing.html">On leaving messages on <em>read</em></a></h3>
+        <p class="dek">There are forty-one unanswered texts in my phone right now. I am not avoiding them. I am also not <em>not</em> avoiding them. This is the philosophy of <em>maybe</em>, applied to friendship.</p>
+        <div class="chips"><span class="chip l">musing</span><span class="chip sl">phones</span></div>
+      </div>
+      <div class="right"><span class="reads">3 min read</span><span>1,240 reads</span></div>
+    </article>
+
+    <article class="river-item">
+      <div class="when"><span class="num">№ 021</span>apr 27</div>
+      <div class="mid">
+        <h3><a href="musing.html">Bangalore auto and the philosophy of <em>maybe</em></a></h3>
+        <p class="dek">The 8:47 auto-rickshaw didn't really say no, but it didn't say yes either, and somewhere inside that ambiguity I had to live for the next eleven minutes. Bangalore traffic is mostly weather; you don't ask the cloud whether it intends to rain.</p>
+        <div class="chips"><span class="chip l">musing</span><span class="chip p">bangalore</span></div>
+      </div>
+      <div class="right"><span class="reads">5 min read</span><span>2,108 reads</span></div>
+    </article>
+
+    <article class="river-item">
+      <div class="when"><span class="num">№ 020</span>apr 18</div>
+      <div class="mid">
+        <h3><a href="musing.html">The autocorrect <em>gaslighter</em></a></h3>
+        <p class="dek">My phone has been telling me my own name is wrong for three years. I keep correcting it. It keeps correcting me back. Somewhere in here is a parable, but I'm too tired to find it.</p>
+        <div class="chips"><span class="chip l">musing</span><span class="chip sl">phones</span></div>
+      </div>
+      <div class="right"><span class="reads">3 min read</span><span>981 reads</span></div>
+    </article>
+
+    <article class="river-item">
+      <div class="when"><span class="num">№ 019</span>apr 09</div>
+      <div class="mid">
+        <h3><a href="musing.html">I have been performing <em>competence</em> for fourteen years</a></h3>
+        <p class="dek">There is a version of me, in meetings, who knows what he is doing. He sits very still. He uses words like “directionally.” I do not know him. I keep him alive for the sake of the household.</p>
+        <div class="chips"><span class="chip l">musing</span><span class="chip b">competence</span></div>
+      </div>
+      <div class="right"><span class="reads">6 min read</span><span>3,402 reads</span></div>
+    </article>
+
+    <article class="river-item">
+      <div class="when"><span class="num">№ 018</span>mar 22</div>
+      <div class="mid">
+        <h3><a href="musing.html">A list of things I <em>almost</em> said</a></h3>
+        <p class="dek">To a stranger on the metro. To a colleague who took credit. To my father in 2014. To my father in 2023. To the boy at the chai stall who knows my order but not my name.</p>
+        <div class="chips"><span class="chip l">musing</span><span class="chip p">small humiliations</span></div>
+      </div>
+      <div class="right"><span class="reads">4 min read</span><span>1,876 reads</span></div>
+    </article>
+
+    <article class="river-item">
+      <div class="when"><span class="num">№ 017</span>mar 14</div>
+      <div class="mid">
+        <h3><a href="musing.html">The 11 p.m. doomscroll and the <em>gentle hand</em></a></h3>
+        <p class="dek">A small, quiet practice: every time I notice I've been scrolling for more than ten minutes, I put my hand on my own chest. Not as a metaphor. As a hand. It works about half the time.</p>
+        <div class="chips"><span class="chip l">musing</span><span class="chip sl">phones</span></div>
+      </div>
+      <div class="right"><span class="reads">3 min read</span><span>4,210 reads</span></div>
+    </article>
+
+    <article class="river-item">
+      <div class="when"><span class="num">№ 016</span>mar 02</div>
+      <div class="mid">
+        <h3><a href="musing.html">The week my mother became a <em>meme</em></a></h3>
+        <p class="dek">She does not know. She will not know. I will not be the one to tell her. I have been sitting with what it means to laugh at someone you also love.</p>
+        <div class="chips"><span class="chip l">musing</span><span class="chip b">family</span></div>
+      </div>
+      <div class="right"><span class="reads">5 min read</span><span>2,933 reads</span></div>
+    </article>
+
+    <article class="river-item">
+      <div class="when"><span class="num">№ 015</span>feb 18</div>
+      <div class="mid">
+        <h3><a href="musing.html">On rehearsing arguments in the <em>shower</em></a></h3>
+        <p class="dek">I am very good at winning fights that have not happened. I am average at the ones that have. There is no theory here. It is just embarrassing.</p>
+        <div class="chips"><span class="chip l">musing</span><span class="chip p">small humiliations</span></div>
+      </div>
+      <div class="right"><span class="reads">3 min read</span><span>1,512 reads</span></div>
+    </article>
+
+    <article class="river-item">
+      <div class="when"><span class="num">№ 014</span>feb 04</div>
+      <div class="mid">
+        <h3><a href="musing.html">I owe a friend an apology and <em>a haircut</em></a></h3>
+        <p class="dek">In 2019 I told him his haircut was bad. It was not bad. I was sad about something else and I had to put it somewhere. He has not asked for an apology. I have not given one.</p>
+        <div class="chips"><span class="chip l">musing</span><span class="chip s">grief</span></div>
+      </div>
+      <div class="right"><span class="reads">4 min read</span><span>867 reads</span></div>
+    </article>
+
+  </section>
+
+  <!-- YEAR -->
+  <div class="year-sep">
+    <div class="y">2025 <em>(a selection)</em></div>
+    <div class="rule"></div>
+  </div>
+
+  <section class="river">
+    <article class="river-item">
+      <div class="when"><span class="num">№ 013</span>dec 30</div>
+      <div class="mid">
+        <h3><a href="musing.html">Why birthdays make me <em>cagey</em></a></h3>
+        <p class="dek">It's not the age. It's the obligation. To want a thing. To name the thing. To receive the thing and feel the correct amount about it, on cue, in front of the people who got it for you.</p>
+        <div class="chips"><span class="chip l">musing</span><span class="chip p">small humiliations</span></div>
+      </div>
+      <div class="right"><span class="reads">4 min read</span><span>2,201 reads</span></div>
+    </article>
+
+    <article class="river-item">
+      <div class="when"><span class="num">№ 012</span>nov 18</div>
+      <div class="mid">
+        <h3><a href="musing.html">The grocer who remembers <em>everything</em></a></h3>
+        <p class="dek">He has known me for nine years. He knows my mother. He knows when I am sick. I do not know his name. I have been too embarrassed to ask, for, now, nine years.</p>
+        <div class="chips"><span class="chip l">musing</span><span class="chip p">bangalore</span></div>
+      </div>
+      <div class="right"><span class="reads">4 min read</span><span>3,098 reads</span></div>
+    </article>
+
+    <article class="river-item">
+      <div class="when"><span class="num">№ 011</span>oct 02</div>
+      <div class="mid">
+        <h3><a href="musing.html">A short, gentle list of things I <em>got wrong</em></a></h3>
+        <p class="dek">In 2019, the friendship. In 2020, the lockdown sourdough. In 2022, the job. In 2023, the apology. In 2024, the apology to the apology. I am working on 2025.</p>
+        <div class="chips"><span class="chip l">musing</span><span class="chip b">competence</span></div>
+      </div>
+      <div class="right"><span class="reads">3 min read</span><span>1,654 reads</span></div>
+    </article>
+  </section>
+
+  <!-- PAGER -->
+  <nav class="pager">
+    <div>page 1 of 3 · 24 essays</div>
+    <div class="pages">
+      <span style="color:var(--ink-4)">←</span>
+      <a class="active">1</a>
+      <a>2</a>
+      <a>3</a>
+      <a>→</a>
+    </div>
+    <div>jump to <a href="shorts.html" style="color:var(--ink-2); border-bottom:1px solid var(--border); padding-bottom:2px;">shorts →</a></div>
+  </nav>
+
+  <!-- COLOPHON -->
+  <footer class="colophon">
+    <div>
+      <h4>about the place</h4>
+      <p><strong style="color:var(--ink)">tiny trauma</strong> is a personal blog by Amit T, an engineering-trained Bangalorean who overthinks most things, occasionally to useful effect. Short essays, shorter fictions. Mostly small. Sometimes funny. Always honest.</p>
+      <span class="hand">if you found something here, tell someone.</span>
+    </div>
+    <div class="currently">
+      <h4>currently</h4>
+      <dl>
+        <div>
+          <dt>reading</dt>
+          <dd><em>Cold Enough for Snow</em>, Jessica Au — slowly, on the metro.</dd>
+        </div>
+        <div>
+          <dt>writing</dt>
+          <dd>something about the chai stall man whose name I still don't know.</dd>
+        </div>
+        <div>
+          <dt>noticing</dt>
+          <dd>the dog at the corner has started recognising the auto, not me.</dd>
+        </div>
+      </dl>
+    </div>
+  </footer>
+
+  <div class="elsewhere-strip">
+    <span class="label">find me elsewhere —</span>
+    <a href="#">twitter</a>
+    <a href="#">instagram</a>
+    <a href="#">rss</a>
+    <a href="mailto:hi@tinytrauma.in">hi@tinytrauma.in</a>
+  </div>
+
+  <div class="colophon-base">
+    <span>© 2026 tiny trauma · set in fraunces &amp; ibm plex mono · made in bangalore</span>
+    <span>vol. 02 · issue 19</span>
+  </div>
+
+</div>
+
+<script>
+  const root = document.documentElement;
+  const btn = document.getElementById('theme-toggle');
+  const label = document.getElementById('theme-label');
+  const stored = localStorage.getItem('tt-theme-v3');
+  if (stored === 'light') {
+    root.setAttribute('data-theme', 'light');
+    label.textContent = 'light';
+    btn.setAttribute('aria-pressed', 'false');
+  }
+  btn.addEventListener('click', () => {
+    const isDark = root.getAttribute('data-theme') === 'dark';
+    root.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    label.textContent = isDark ? 'light' : 'dark';
+    btn.setAttribute('aria-pressed', String(!isDark));
+    localStorage.setItem('tt-theme-v3', isDark ? 'light' : 'dark');
+  });
+</script>
+</body>
+</html>

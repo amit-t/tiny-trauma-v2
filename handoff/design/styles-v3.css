@@ -1,0 +1,356 @@
+/* ============================================================
+   TINY TRAUMA · v3 — shared tokens, base, navbar, colophon
+   Dark canonical, light alternate.
+   ============================================================ */
+:root {
+  --bg:        #14110C;
+  --surface:   #1D1812;
+  --raised:    #251F17;
+  --art:       #2A231A;
+  --art-l:     #2D2538;   /* lavender */
+  --art-s:     #1F2B22;   /* sage */
+  --art-b:     #31281A;   /* butter */
+  --art-p:     #38241F;   /* peach */
+  --art-sl:    #1E2A35;   /* slate */
+
+  --ink:       #ECE4D0;
+  --ink-2:     #B5AB93;
+  --ink-3:     #847B6A;
+  --ink-4:     #5A5246;
+
+  --border:    #2A2520;
+  --rule:      #34302A;
+
+  --accent:    #F08652;
+  --accent-h:  #FF9D6E;
+  --hi:        #FFE680;
+  --on-accent: #14110C;   /* readable on the accent fill */
+  --stripe:    rgba(255,255,255,0.025);  /* art-slot diagonal pattern */
+
+  --chip-l-bg:#2F2840; --chip-l-fg:#CABEEB;  /* musing */
+  --chip-s-bg:#28332A; --chip-s-fg:#BFD3BC;  /* short / grief */
+  --chip-b-bg:#34301F; --chip-b-fg:#DDD09B;  /* featured / butter */
+  --chip-p-bg:#3A2722; --chip-p-fg:#F2B6A0;  /* bangalore / peach */
+  --chip-sl-bg:#1E2A35; --chip-sl-fg:#A8C3DC; /* phones */
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body:    "IBM Plex Mono", ui-monospace, monospace;
+  --font-hand:    "Caveat", cursive;
+
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-1: 120ms;
+  --dur-2: 220ms;
+}
+
+[data-theme="light"] {
+  --bg:        #F4EFE3;
+  --surface:   #EBE4D2;
+  --raised:    #FFFFFF;
+  --art:       #E3DAC4;
+  --art-l:     #DCD4E9;
+  --art-s:     #D6E1CC;
+  --art-b:     #ECE0B6;
+  --art-p:     #ECCBBC;
+  --art-sl:    #C9D6E3;
+
+  --ink:       #1A1613;
+  --ink-2:     #52483D;
+  --ink-3:     #8A7F6E;
+  --ink-4:     #B3A893;
+
+  --border:    #D9CFB8;
+  --rule:      #BFB59C;
+
+  --accent:    #B4471F;
+  --accent-h:  #913719;
+  --hi:        #F5D33A;
+  --on-accent: #FFFFFF;
+  --stripe:    rgba(20,17,12,0.04);
+
+  --chip-l-bg:#E5DAFB; --chip-l-fg:#3D2E6B;
+  --chip-s-bg:#D5E8D2; --chip-s-fg:#2F4F35;
+  --chip-b-bg:#F1E6A8; --chip-b-fg:#5E4A12;
+  --chip-p-bg:#F8D7C7; --chip-p-fg:#6B2E1A;
+  --chip-sl-bg:#D2E1F0; --chip-sl-fg:#1F3A55;
+}
+
+* , *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+body {
+  font-feature-settings: "calt" 0;
+  transition: background var(--dur-2) var(--ease), color var(--dur-2) var(--ease);
+}
+::selection { background: var(--hi); color: var(--ink); }
+
+a { color: var(--accent); text-decoration: none; transition: color var(--dur-1) var(--ease); }
+a:hover { color: var(--accent-h); }
+
+h1, h2, h3, h4, p { margin: 0; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+
+:focus { outline: none; }
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; }
+}
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 56px; }
+.wrap-narrow { max-width: 760px; margin: 0 auto; padding: 0 56px; }
+@media (max-width: 700px) {
+  .wrap, .wrap-narrow { padding: 0 24px; }
+}
+
+/* ============================================================
+   NAVBAR
+   ============================================================ */
+.nav {
+  padding: 28px 0 24px;
+  display: flex; align-items: baseline; justify-content: space-between;
+  border-bottom: 1px solid var(--rule);
+}
+.brand {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-transform: lowercase;
+  font-variation-settings: "opsz" 144, "SOFT" 30;
+  line-height: 1;
+  color: var(--ink);
+  text-decoration: none;
+}
+.brand i { font-style: italic; color: var(--accent); font-weight: 700; }
+.brand:hover { color: var(--ink); }
+
+.nav-links { display: flex; align-items: center; gap: 32px; }
+@media (max-width: 700px) { .nav-links { gap: 18px; } .nav-links .secondary { display: none; } }
+.nav-links a {
+  color: var(--ink-2);
+  font-family: var(--font-body); font-size: 14px;
+  text-decoration: none;
+  position: relative;
+  padding: 4px 0;
+}
+.nav-links a:hover { color: var(--ink); }
+.nav-links a.active { color: var(--ink); }
+.nav-links a.active::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -2px;
+  height: 2px; background: var(--accent);
+}
+.theme-toggle {
+  border: 1px solid var(--border);
+  padding: 7px 14px; border-radius: 999px;
+  color: var(--ink-2); font-family: var(--font-body); font-size: 13px;
+  display: inline-flex; gap: 8px; align-items: center;
+  transition: border-color var(--dur-1) var(--ease), color var(--dur-1) var(--ease);
+}
+.theme-toggle:hover { border-color: var(--ink-3); color: var(--ink); }
+.theme-toggle .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ink); }
+
+/* ============================================================
+   CHIPS
+   ============================================================ */
+.chip {
+  font-family: var(--font-body); font-size: 11.5px;
+  padding: 3px 10px; border-radius: 999px;
+  font-weight: 400;
+  display: inline-block;
+}
+.chip.l { background: var(--chip-l-bg); color: var(--chip-l-fg); }
+.chip.s { background: var(--chip-s-bg); color: var(--chip-s-fg); }
+.chip.b { background: var(--chip-b-bg); color: var(--chip-b-fg); }
+.chip.p { background: var(--chip-p-bg); color: var(--chip-p-fg); }
+.chip.sl{ background: var(--chip-sl-bg); color: var(--chip-sl-fg); }
+
+/* ============================================================
+   FILTER PILLS
+   ============================================================ */
+.filters {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  margin-bottom: 36px;
+}
+.filter {
+  font-family: var(--font-body); font-size: 12.5px;
+  padding: 6px 12px; border-radius: 999px;
+  background: transparent; border: 1px solid var(--border);
+  color: var(--ink-2);
+  transition: all var(--dur-1) var(--ease);
+}
+.filter:hover { color: var(--ink); border-color: var(--ink-3); }
+.filter.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.filter .count { color: var(--ink-3); margin-left: 6px; }
+.filter.active .count { color: var(--ink-3); }
+
+/* ============================================================
+   HANDWRITTEN ASIDE — sparingly. Two per page, ideally inline.
+   ============================================================ */
+.hand-inline {
+  font-family: var(--font-hand);
+  font-weight: 500;
+  color: var(--accent);
+  font-size: 1.5em;
+  line-height: 1;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  margin: 0 0.04em;
+}
+.hand-aside {
+  font-family: var(--font-hand);
+  color: var(--accent);
+  font-size: 22px; line-height: 1.1;
+  transform: rotate(-2.5deg);
+  display: inline-block;
+}
+
+/* ============================================================
+   ART SLOT (placeholder until real imagery is dropped in)
+   ============================================================ */
+.art-slot {
+  border-radius: 16px;
+  background: var(--art);
+  position: relative;
+  overflow: hidden;
+}
+.art-slot::before {
+  content: ""; position: absolute; inset: 0;
+  background: repeating-linear-gradient(135deg,
+    var(--stripe) 0 14px,
+    transparent 14px 28px);
+}
+.art-slot .ph {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--ink-3); font-size: 12px;
+  background: rgba(0,0,0,0.3); padding: 5px 12px; border-radius: 4px;
+  font-family: var(--font-body);
+}
+[data-theme="light"] .art-slot .ph { background: rgba(20,17,12,0.18); color: var(--ink-2); }
+
+/* ============================================================
+   COLOPHON FOOTER
+   ============================================================ */
+.colophon {
+  padding: 40px 0 32px;
+  border-top: 1px solid var(--rule);
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 56px;
+}
+@media (max-width: 700px) { .colophon { grid-template-columns: 1fr; gap: 28px; } }
+.colophon h4 {
+  font-family: var(--font-display);
+  font-size: 20px; font-weight: 600;
+  letter-spacing: -0.01em; color: var(--ink);
+  margin-bottom: 10px;
+  font-variation-settings: "opsz" 24, "SOFT" 70;
+}
+.colophon p { color: var(--ink-2); font-size: 13.5px; line-height: 1.6; max-width: 46ch; }
+.colophon .hand {
+  font-family: var(--font-hand);
+  color: var(--accent); font-size: 22px;
+  transform: rotate(-3deg);
+  display: inline-block; margin-top: 16px;
+}
+.colophon .social {
+  display: flex; flex-wrap: wrap; gap: 18px;
+  margin-top: 20px;
+}
+.colophon .social a {
+  color: var(--ink-2); font-size: 13.5px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+  transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.colophon .social a:hover { color: var(--ink); border-bottom-color: var(--ink); }
+.colophon-base {
+  border-top: 1px solid var(--border);
+  padding: 24px 0 64px;
+  color: var(--ink-3); font-size: 12px;
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+
+/* ============================================================
+   CURRENTLY — three-line desk-note in the colophon right column
+   ============================================================ */
+.currently dl { display: grid; gap: 12px; margin: 0; padding: 0; }
+.currently dl > div {
+  display: grid; grid-template-columns: 5.5rem 1fr; gap: 16px;
+  font-size: 13.5px; line-height: 1.55;
+}
+.currently dt {
+  color: var(--ink-3);
+  font-family: var(--font-body);
+  font-size: 12.5px;
+  padding-top: 2px;
+}
+.currently dd {
+  margin: 0;
+  color: var(--ink-2);
+  font-family: var(--font-body);
+}
+.currently dd em { color: var(--ink); font-style: italic; }
+.currently dd .meta { color: var(--ink-3); font-size: 12px; display: block; margin-top: 2px; }
+
+/* ============================================================
+   ELSEWHERE STRIP — horizontal, between colophon and base
+   ============================================================ */
+.elsewhere-strip {
+  padding: 18px 0;
+  border-top: 1px solid var(--border);
+  display: flex; gap: 20px; align-items: center; flex-wrap: wrap;
+  font-size: 13px;
+}
+.elsewhere-strip .label {
+  color: var(--ink-3);
+  font-family: var(--font-body);
+}
+.elsewhere-strip a {
+  color: var(--ink-2);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 2px;
+  transition: color var(--dur-1) var(--ease), border-color var(--dur-1) var(--ease);
+}
+.elsewhere-strip a:hover { color: var(--ink); border-bottom-color: var(--ink); }
+
+/* ============================================================
+   PAGE INTRO (used on list/about pages)
+   ============================================================ */
+.page-intro { padding: 72px 0 48px; }
+.page-intro .kicker {
+  color: var(--accent); font-size: 13.5px; margin-bottom: 16px;
+  display: flex; gap: 10px; align-items: center;
+}
+.page-intro h1 {
+  font-family: var(--font-display);
+  font-size: clamp(48px, 8vw, 96px);
+  line-height: 0.95;
+  letter-spacing: -0.035em;
+  font-weight: 700;
+  font-variation-settings: "opsz" 144, "SOFT" 40;
+  color: var(--ink);
+  max-width: 16ch;
+}
+.page-intro h1 em { font-style: italic; color: var(--accent); font-weight: 600; }
+.page-intro .lede {
+  font-family: var(--font-body); color: var(--ink-2);
+  font-size: 16px; line-height: 1.65;
+  margin-top: 24px; max-width: 52ch;
+}
