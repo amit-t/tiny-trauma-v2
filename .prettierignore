@@ -1,0 +1,9 @@
+node_modules
+.next
+dist
+build
+pnpm-lock.yaml
+
+# Project docs and design ground-truth — author-owned, do not reformat.
+handoff/
+.agents/

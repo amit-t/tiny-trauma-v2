@@ -1,0 +1,111 @@
+@import "tailwindcss";
+
+@theme {
+  --color-page: var(--bg);
+  --color-surface: var(--surface);
+  --color-raised: var(--raised);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-accent: var(--accent);
+  --color-accent-h: var(--accent-h);
+  --color-hi: var(--hi);
+  --color-rule: var(--rule);
+  --color-rule-soft: var(--border);
+
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-hand: var(--font-hand);
+}
+
+:root {
+  --bg: #14110c;
+  --surface: #1d1812;
+  --raised: #251f17;
+  --art: #2a231a;
+  --art-l: #2d2538;
+  --art-s: #1f2b22;
+  --art-b: #31281a;
+  --art-p: #38241f;
+  --art-sl: #1e2a35;
+
+  --ink: #ece4d0;
+  --ink-2: #b5ab93;
+  --ink-3: #847b6a;
+  --ink-4: #5a5246;
+
+  --border: #2a2520;
+  --rule: #34302a;
+
+  --accent: #f08652;
+  --accent-h: #ff9d6e;
+  --hi: #ffe680;
+  --on-accent: #14110c;
+  --stripe: rgba(255, 255, 255, 0.025);
+
+  --chip-l-bg: #2f2840;
+  --chip-l-fg: #cabeeb;
+  --chip-s-bg: #28332a;
+  --chip-s-fg: #bfd3bc;
+  --chip-b-bg: #34301f;
+  --chip-b-fg: #ddd09b;
+  --chip-p-bg: #3a2722;
+  --chip-p-fg: #f2b6a0;
+  --chip-sl-bg: #1e2a35;
+  --chip-sl-fg: #a8c3dc;
+}
+
+[data-theme="light"] {
+  --bg: #f4efe3;
+  --surface: #ebe4d2;
+  --raised: #ffffff;
+  --art: #e3dac4;
+  --art-l: #dcd4e9;
+  --art-s: #d6e1cc;
+  --art-b: #ece0b6;
+  --art-p: #eccbbc;
+  --art-sl: #c9d6e3;
+
+  --ink: #1a1613;
+  --ink-2: #52483d;
+  --ink-3: #8a7f6e;
+  --ink-4: #b3a893;
+
+  --border: #d9cfb8;
+  --rule: #bfb59c;
+
+  --accent: #b4471f;
+  --accent-h: #913719;
+  --hi: #f5d33a;
+  --on-accent: #ffffff;
+  --stripe: rgba(20, 17, 12, 0.045);
+
+  --chip-l-bg: #e5dafb;
+  --chip-l-fg: #3d2e6b;
+  --chip-s-bg: #d5e8d2;
+  --chip-s-fg: #2f4f35;
+  --chip-b-bg: #f1e6a8;
+  --chip-b-fg: #5e4a12;
+  --chip-p-bg: #f8d7c7;
+  --chip-p-fg: #6b2e1a;
+  --chip-sl-bg: #d2e1f0;
+  --chip-sl-fg: #1f3a55;
+}
+
+html,
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-body), ui-monospace, SFMono-Regular, Menlo, monospace;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--hi);
+  color: var(--on-accent);
+}
