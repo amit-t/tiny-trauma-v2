@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "grill-me": {
+      "source": "amit-t/skills",
+      "sourceType": "github",
+      "skillPath": "grill-me/SKILL.md",
+      "computedHash": "85da1b168c6f3aa93fd67ca9871fcb1f5e3c446c8efcfd5aa95f63a5fa842ae7"
+    }
+  }
+}
