@@ -269,3 +269,136 @@ owner-only steps:
       in the repo and invoke it. Brainstorm → draft → accept the MDX →
       `git push`. DO rebuilds (~2 min). New essay live at
       `https://tinytrauma.in/musings/<slug>`.
+
+---
+
+## Writing posts · create, review, publish
+
+The whole post lifecycle. Writing happens locally in the
+`tiny-trauma-content` Claude Code skill. The deployed admin only views
+MDX, never edits it.
+
+### 1 · Create — grill-me draft to MDX
+
+From the repo root, open Claude Code:
+
+```bash
+cd ~/Projects/AmitTiwari/tiny-trauma-v2
+claude
+```
+
+Then pick a mode:
+
+| Goal                          | Command                                                |
+| ----------------------------- | ------------------------------------------------------ |
+| Full essay → `.mdx`           | `/skill tiny-trauma-content essay`                     |
+| Short fiction → `.mdx`        | `/skill tiny-trauma-content short`                     |
+| Brainstorm only (no file)     | `/skill tiny-trauma-content brainstorm`                |
+| Cross-post a published essay  | `/skill tiny-trauma-content cross-post musings/<slug>` |
+
+The essay flow walks 10 steps: noticings → 3–5 angles → outline → draft
+→ paragraph-by-paragraph edits → title → frontmatter → file.
+One question at a time. Push back freely — it's the editor, not the
+co-author. Full flow spec: `.claude/skills/tiny-trauma-content/prompts/essay.md`.
+
+At the end it writes `content/musings/<slug>.mdx` (or
+`content/shorts/<slug>.mdx`) and prints the exact `git add / commit / push`
+commands. **Do not run them yet — review first.**
+
+### 2 · Review — local preview before publish
+
+The skill emits `status: published` by default. If you want to sit on it,
+flip the frontmatter to `status: draft` before previewing — drafts are
+excluded from public lists in prod but show up at the direct URL.
+
+```bash
+pnpm db:up        # only if pg isn't already running
+pnpm dev
+```
+
+Then eyeball:
+
+- [ ] `http://localhost:3000/musings/<slug>` (or `/shorts/<slug>`) —
+      whole essay renders, hero tint matches the vibe, drop cap on
+      paragraph one, no console errors.
+- [ ] **Three custom marks render correctly:**
+      `==handwritten==` → Caveat coral inline ·
+      `>>> pullquote` → surface-tinted block with coral corner mark ·
+      `[[aside]] line` → handwritten block, rotated.
+- [ ] **Frontmatter sanity** — title sentence case with one italic word,
+      `dek` ≤ 30 words, `number` = `max(existing) + 1` for the type,
+      `tags` from the vocab in `frontmatter-spec.md`, `heroTint` is one
+      of `lavender | sage | butter | peach | slate`.
+- [ ] **Voice gut-check** — no emoji, no `**bold**` in body, no
+      numbered lists, no "we", lowercase intentional. Read it aloud
+      once. If a sentence stalls in your mouth, cut or rewrite it.
+- [ ] Listing page (`/musings` or `/shorts`) shows the new card with
+      the right tint and the new `number`. Featured only if `featured: true`.
+
+If anything is off, edit the `.mdx` directly in your editor (or re-invoke
+the skill and tell it what to change) and refresh.
+
+### 3 · Complete — publish + email
+
+Once the preview looks right:
+
+```bash
+git add content/musings/<slug>.mdx
+git commit -m "essay: <title with italics stripped>"
+git push
+```
+
+The push triggers a DigitalOcean rebuild (~2 min). Verify:
+
+- [ ] `https://tinytrauma.in/musings/<slug>` returns 200 with the new essay.
+- [ ] The listing page (`/musings` or `/shorts`) has the new card at the
+      top (it sorts by `publishedAt` desc).
+
+Then mail it to the list:
+
+- [ ] Sign in at `https://tinytrauma.in/sign-in` (owner email → magic link).
+- [ ] Go to **`/admin/campaigns/new`**, pick the new essay from the post
+      picker, choose a **segment** (`weekly` / `monthly` / `both` / `all`),
+      and click **Create campaign**.
+- [ ] On the campaign editor: review the **subject** (pre-filled from
+      `title`), **preheader** (pre-filled from `dek`), and add a
+      **personal note** if you want one above the essay.
+- [ ] **Send a test to yourself first** (button at the bottom). Open it
+      in Gmail + a mobile client. Check links — public URL, unsubscribe,
+      images. Send-test never logs an event, so use it freely.
+- [ ] When the test looks right, either:
+      **Send now** — confirm prompt: "send to every active subscriber in
+      this segment? it's going out the door." · or
+      **Schedule** — pick a future timestamp; the GitHub Actions cron
+      (`*/15 * * * *`) picks it up and dispatches it.
+- [ ] After send, the campaign row in `/admin/campaigns` flips to `sent`
+      with `sentCount` filled in. Open/click counts arrive over the next
+      hours/days via the Resend webhook.
+
+### What goes where — at a glance
+
+| Step             | Lives in                                        | Touches DB?               |
+| ---------------- | ----------------------------------------------- | ------------------------- |
+| Brainstorm       | Local Claude Code skill                         | no                        |
+| Draft + edit     | Local Claude Code skill → `.mdx` on disk        | no                        |
+| Preview          | `pnpm dev` reads MDX via Velite                 | no                        |
+| Publish to web   | `git push` → DO rebuild                         | no (content is in git)    |
+| Email to list    | `/admin/campaigns/*` (writes a campaign row)    | yes (`campaigns` table)   |
+| Open/click stats | Resend → `/api/webhooks/resend` → DB increments | yes (counters + events)   |
+
+### Common things that go wrong
+
+- **Build fails with Velite/Zod error** — frontmatter doesn't match
+  `frontmatter-spec.md`. Check enum values, `publishedAt` format, that
+  `number` is an integer.
+- **Pullquote renders as a normal blockquote** — `>>>` must be at the
+  start of the line (CommonMark parses it as three nested `>` first;
+  the remark plugin walks that AST). No leading spaces.
+- **Essay missing from listing but URL works** — `status: draft`. Flip
+  to `published` and re-push.
+- **Cron didn't pick up a scheduled campaign** — check GitHub Actions
+  → "cron-send-campaigns" runs. Most common cause: `CRON_SECRET` /
+  `SITE_URL` repo secrets unset, or `scheduledFor` is in the future.
+- **Webhook events not landing** — Resend dashboard → Webhooks → verify
+  the signing secret in DO env matches and the endpoint URL is
+  `https://tinytrauma.in/api/webhooks/resend`.
