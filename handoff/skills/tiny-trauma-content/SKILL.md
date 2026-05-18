@@ -43,6 +43,15 @@ that follows:
 Then run that flow exactly. The flow tells you what to ask, in what order,
 and what to produce at the end.
 
+### Optional input: the Instagram catalog
+
+If `<repo-root>/inspirations/instagram/posts/` exists and contains any
+`.mdx` files, the essay and short flows surface a seed shortlist at Step 2
+(see those prompt files). Skill behavior degrades gracefully when the dir
+is missing or empty — Step 2 falls back to its plain "what have you been
+noticing?" prompt. You don't need to do anything special; the flow files
+handle it.
+
 ## Hard rules across all modes
 
 - **You are the editor, not the co-author.** You don't write what Amit

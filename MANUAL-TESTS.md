@@ -402,3 +402,186 @@ Then mail it to the list:
 - **Webhook events not landing** — Resend dashboard → Webhooks → verify
   the signing secret in DO env matches and the endpoint URL is
   `https://tinytrauma.in/api/webhooks/resend`.
+
+---
+
+## Pulling Instagram inspirations into the catalog
+
+A local-only pipeline that turns posts you've already saved into Instagram
+collections into a searchable catalog of writing seeds at
+`inspirations/instagram/posts/`. The catalog is git-tracked (so it travels
+across machines) but **never enters the deployed app build** — Velite globs
+`content/**` only and nothing imports from `inspirations/`.
+
+The pipeline uses **your own logged-in Chrome session** via the
+[Claude in Chrome](https://claude.ai/chrome) extension — no scrapers, no
+third-party API, no ToS-violating bot detection.
+
+### One-time setup
+
+- [ ] Install the **Claude in Chrome** extension and confirm it shows
+      "Connected" in the popup.
+- [ ] Sign into Instagram in that Chrome profile.
+- [ ] In Instagram, create one or more **Saved Collections** dedicated to
+      Tiny Trauma material (e.g. `tiny-trauma-musings`,
+      `tiny-trauma-shorts`, `overheard`). Save posts into those collections
+      as you scroll.
+- [ ] Open each collection in your browser and copy its URL (format:
+      `https://www.instagram.com/<you>/saved/<collection-name>/<numeric-id>/`).
+- [ ] Edit `inspirations/instagram/collections.json` and replace the
+      placeholder entries with your real URLs. Set `default_seed_type` to
+      `"musing"`, `"short"`, or `null` per collection (controls how the
+      writing skill prefers/orders them at Step 1a / 2a).
+
+### Running an ingest
+
+From the repo root, in Claude Code:
+
+```
+> /skill tt-instagram-ingest
+```
+
+What happens:
+
+1. Skill reads `inspirations/instagram/collections.json` and
+   `inspirations/instagram/_url_registry.json`.
+2. For each collection: navigates Chrome to the collection URL, scrolls
+   until lazy-loading stabilizes, extracts every post URL.
+3. Diffs against the registry — only **new** URLs are fetched.
+4. For each new post: opens the post, captures the caption, translates
+   Hindi/Hinglish → English if needed, runs the Tiny-Trauma analysis
+   (Friction / Seed line / Voice / Essay angle / Short angle / Notable
+   quote / Raw caption), and writes one `.mdx` to
+   `inspirations/instagram/posts/`.
+5. Registry is updated after every single file write — partial runs are
+   safe.
+6. Prints a summary: `N new posts ingested across M collections`.
+
+Idempotent. Re-run as often as you want; it does nothing when there are no
+new saves.
+
+Other modes:
+
+- `mode=dry-run` — list which URLs would be fetched, fetch nothing.
+- `mode=rebuild-registry` — scan `posts/*.mdx` and rebuild
+  `_url_registry.json` from their frontmatter (recovery path).
+
+### What each catalog post looks like
+
+```yaml
+---
+post_number: 7
+url: "https://www.instagram.com/p/XXXX/"
+creator: "@handle"
+collection: "tiny-trauma-musings"
+collection_meta:
+  name: "tiny-trauma-musings"
+  url: "https://www.instagram.com/.../saved/tiny-trauma-musings/.../"
+  default_seed_type: "musing"
+ingested_at: "2026-05-18"
+title: "what the line above the bus stop said"
+seed_type: "musing"
+tone_tags: [bangalore, small humiliations]
+heat: high               # high | medium | low — gut signal
+status: unused           # unused | drafting | shipped:<slug>
+language_source: english
+---
+
+# what the line above the bus stop said
+
+## Friction
+One sentence — the small daily friction this evokes.
+
+## Seed line
+The single image or phrase to remember.
+
+## Voice
+mine | observed | overheard | text-on-screen
+
+## Essay angle
+One-line thesis if it could become a musing. Else: —
+
+## Short angle
+One-line premise if it could become a short fiction. Else: —
+
+## Notable quote
+> Best line from the caption verbatim (translated to English if the source
+> was Hindi/Hinglish).
+
+## Raw caption
+{full caption, original language preserved}
+```
+
+### Searching the catalog locally
+
+The catalog is just a folder of Markdown files. Use whatever you already
+have:
+
+```bash
+# every high-heat unused post
+rg -l 'heat: high' inspirations/instagram/posts | xargs rg -l 'status: unused'
+
+# everything tagged 'bangalore'
+rg -l 'tone_tags:.*bangalore' inspirations/instagram/posts
+
+# every IG seed that became a published essay
+rg 'status: shipped:' inspirations/instagram/posts
+
+# fuzzy browse (if you have fzf)
+fzf --preview 'bat --color=always {}' < <(ls inspirations/instagram/posts/*.mdx)
+```
+
+### How it feeds the writing skill
+
+When you run `/skill tiny-trauma-content essay` (or `short`), **Step 2** of
+the essay flow (or **Step 1a** of the short flow) reads the catalog,
+filters `status: unused`, ranks by heat then recency, and offers the top 5
+as a numbered shortlist before the usual "or tell me yours" fallback.
+
+- Pick a number → the writing skill loads that post's Friction + Seed line
+  + Raw caption as your opening noticing, **and immediately flips the
+  catalog post's `status` from `unused` to `drafting`**. If you abandon
+  the session, the catalog reflects that the seed was chewed on (it won't
+  show up in the shortlist next time).
+- Reply with anything else → the writing skill ignores the catalog and
+  uses what you said. The catalog stays untouched.
+- Ship the essay → Step 9 of the writing flow flips the catalog post's
+  `status` to `shipped:<slug>` and stages the catalog file alongside the
+  essay file for the commit. **The loop closes itself** — `rg 'status:
+  shipped:'` later tells you exactly which IG seed became which essay.
+
+If `inspirations/instagram/posts/` doesn't exist or has zero unused posts,
+the writing skill falls back to its original plain "what have you been
+noticing?" opening. The catalog is opt-in by virtue of existing.
+
+### Sharing the generic version
+
+A project-agnostic copy of the ingestion skill lives at
+`handoff/skills/instagram-saves-catalog/`. It's not installed into
+`.claude/skills/` — when you want it in your global library, cut & move:
+
+```bash
+cp -R handoff/skills/instagram-saves-catalog ~/.claude/skills/
+```
+
+The generic version takes `--workspace`, `--collections`, and
+`--analysis-template` as arguments, so anyone can point it at their own
+output directory with their own per-post analysis template. The
+TT-private version (`tt-instagram-ingest`) is a thin wrapper that
+hardcodes the paths and bundles the Tiny-Trauma analysis template.
+
+### Common things that go wrong
+
+- **"collections.json is empty"** — you haven't replaced the placeholder
+  entries. Edit the file with real Instagram collection URLs.
+- **"Placeholder URL detected"** — `<your-handle>` or `<collection-id>`
+  is still in a URL. Replace it.
+- **Instagram shows login page** — sign into the Chrome profile that owns
+  the saved collections and re-run.
+- **"No new posts since last run"** — expected on re-runs. Save more
+  posts in IG and re-run.
+- **Catalog post's `status` didn't flip when you picked it** — the
+  writing skill missed Step 2a's status update. Manually edit the
+  catalog file's frontmatter; report so the skill prompt gets tightened.
+- **Wrong handle in extracted posts** — Chrome is logged into a different
+  Instagram account. Switch profiles.

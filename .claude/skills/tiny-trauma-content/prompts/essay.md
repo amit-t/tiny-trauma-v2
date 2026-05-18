@@ -7,9 +7,49 @@ edits → title → frontmatter → MDX file.
 
 Greet briefly. One line.
 
-> "okay. an essay. what have you been noticing this week?"
+Before greeting, check for an inspiration catalog at
+`<repo-root>/inspirations/instagram/posts/`. If it exists and contains at
+least one `.mdx` with frontmatter `status: unused`, run Step 2a. Otherwise
+go straight to Step 2 (the plain noticings prompt below).
 
-Then **wait**. Don't bullet-prompt. Don't list options.
+## Step 2a · Catalog shortlist (only if catalog exists with unused posts)
+
+Read every `.mdx` in `<repo-root>/inspirations/instagram/posts/`. Filter to
+`status: unused`. Rank by:
+
+1. `heat` descending (`high` → `medium` → `low`)
+2. `ingested_at` descending (newest first)
+
+Take the top **5**. Print as a shortlist:
+
+```
+> okay. an essay. couple of saved noticings from the catalog if any pull
+  you, or tell me yours:
+>
+>   1. {Seed line, truncated to ~70 chars}      ↳ @{creator} · {heat}
+>   2. ...
+>   3. ...
+>   4. ...
+>   5. ...
+>
+> pick 1–5, or just tell me what you've been noticing.
+```
+
+Wait.
+
+- If he picks a number → load that post's full body. **Immediately flip
+  that catalog post's frontmatter `status` from `unused` to `drafting`**
+  (so an abandoned session doesn't leave the catalog claiming it's still
+  pristine). Inject its `Friction`, `Seed line`, and `Raw caption` into
+  the conversation as his opening noticing, then continue with the usual
+  one-at-a-time sharpening questions from Step 2. Remember the post's
+  file path — you'll need it in Step 9.
+- If he replies with anything else (a sentence, "none", "let me think"),
+  fall through to Step 2 with whatever he said as the first noticing. Do
+  not load a catalog post.
+
+If fewer than 5 unused posts exist, show however many there are. If zero,
+skip 2a entirely and go to Step 2.
 
 ## Step 2 · Noticings (5–10 min)
 
@@ -25,6 +65,10 @@ follow-ups:
 When he stalls or says "that's about it", reflect back what you've heard in
 your own words. He'll either confirm or correct one of them — the correction
 is usually the real essay.
+
+If a catalog post was loaded in Step 2a, the first "noticing" is already
+there — keep going with the sharpening loop until you have 3–5 frictions,
+then proceed.
 
 ## Step 3 · Angle (3–5 options)
 
@@ -121,10 +165,17 @@ Compute:
 
 Write `content/musings/<slug>.mdx` with the full frontmatter + body.
 
+**If the essay was seeded from a catalog post in Step 2a:** open that
+catalog file and flip its frontmatter `status` from `drafting` (or
+`unused` if it was never updated mid-flow) to `shipped:<slug>`. This
+closes the loop — the catalog now remembers which IG seed became which
+essay.
+
 Then print, in a code block, the exact commands he should run:
 
 ```
 git add content/musings/<slug>.mdx
+git add inspirations/instagram/posts/<catalog-file>.mdx   # only if seeded
 git commit -m "essay: <title with italics stripped>"
 git push
 ```

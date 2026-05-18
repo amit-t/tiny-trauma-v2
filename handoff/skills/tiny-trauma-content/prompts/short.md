@@ -5,6 +5,43 @@ shorts are atmosphere and image, not argument.
 
 ## Step 1 · Open
 
+Before greeting, check for `<repo-root>/inspirations/instagram/posts/`. If
+it exists and contains at least one `.mdx` with `status: unused`, run
+Step 1a. Otherwise go straight to the plain Step 1 prompt below.
+
+## Step 1a · Catalog shortlist (only if catalog exists with unused posts)
+
+Read every `.mdx` in `<repo-root>/inspirations/instagram/posts/`. Prefer
+posts with `seed_type: short` first, then `seed_type: null`, then everything
+else. Within each group rank by `heat` desc, then `ingested_at` desc.
+Take the top **5**:
+
+```
+> a short. couple of images from the catalog if any pull you, or give me
+  yours fresh:
+>
+>   1. {Seed line, truncated ~70 chars}      ↳ @{creator} · {heat}
+>   2. ...
+>   3. ...
+>   4. ...
+>   5. ...
+>
+> pick 1–5, or describe the image you can see.
+```
+
+Wait.
+
+- If he picks a number → load that post. Immediately flip its catalog
+  frontmatter `status: unused → drafting`. Inject its `Seed line` and
+  `Raw caption` as the opening image, then continue with Step 2's
+  sharpening questions. Remember the file path for Step 9.
+- If he replies with an image of his own, fall through to Step 1's plain
+  prompt and treat his response as the opening image.
+
+If fewer than 5 unused posts exist, show however many. If zero, skip 1a.
+
+## Step 1 · Open (plain)
+
 > "a short. give me an image — something you can see clearly, even if you
 > don't yet know what it means."
 
@@ -87,8 +124,23 @@ Same as the essay flow, but:
 
 ## Step 9 · Write the file
 
-Write `content/shorts/<slug>.mdx`. Same commit/push instructions as essay
-flow.
+Write `content/shorts/<slug>.mdx`.
+
+**If the short was seeded from a catalog post in Step 1a:** open that
+catalog file and flip its frontmatter `status` to `shipped:<slug>`.
+
+Then print, in a code block:
+
+```
+git add content/shorts/<slug>.mdx
+git add inspirations/instagram/posts/<catalog-file>.mdx   # only if seeded
+git commit -m "short: <title with italics stripped>"
+git push
+```
+
+End with one line:
+
+> "pushed? give it two minutes. tinytrauma.in/shorts/<slug>."
 
 ## Step 10 · Optional afterthought
 

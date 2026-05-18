@@ -1,0 +1,14 @@
+{
+  "$comment": "Replace placeholder URLs with your real Instagram saved-collection URLs. To find one: open Instagram in browser → Saved → click into a named collection → copy the address bar. Extra fields per collection (e.g. 'tag', 'default_seed_type', 'priority') are forwarded into each post's frontmatter as `collection_meta` so analysis templates can read them.",
+  "collections": [
+    {
+      "name": "ideas-bucket",
+      "url": "https://www.instagram.com/<your-handle>/saved/ideas-bucket/<collection-id>/"
+    },
+    {
+      "name": "recipes",
+      "url": "https://www.instagram.com/<your-handle>/saved/recipes/<collection-id>/",
+      "tag": "food"
+    }
+  ]
+}
