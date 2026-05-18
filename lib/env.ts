@@ -12,6 +12,7 @@ export const env = createEnv({
     RESEND_WEBHOOK_SECRET: z.string().min(1).optional(),
     CRON_SECRET: z.string().min(1),
     OWNER_EMAIL: z.string().email(),
+    PLAUSIBLE_DOMAIN: z.string().min(1).optional(),
   },
   client: {},
   runtimeEnv: {
@@ -24,6 +25,7 @@ export const env = createEnv({
     RESEND_WEBHOOK_SECRET: process.env.RESEND_WEBHOOK_SECRET,
     CRON_SECRET: process.env.CRON_SECRET,
     OWNER_EMAIL: process.env.OWNER_EMAIL,
+    PLAUSIBLE_DOMAIN: process.env.PLAUSIBLE_DOMAIN,
   },
   skipValidation:
     !!process.env.SKIP_ENV_VALIDATION || process.env.npm_lifecycle_event === "lint",

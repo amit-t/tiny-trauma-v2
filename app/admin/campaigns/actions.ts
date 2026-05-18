@@ -33,7 +33,7 @@ export async function createCampaignFromPost(formData: FormData) {
   const subject = post.title.replace(SUBJECT_STRIP, "$1");
   const preheader = post.dek.replace(SUBJECT_STRIP, "$1").slice(0, 90);
 
-  const c = createCampaign({
+  const c = await createCampaign({
     postSlug: post.slug,
     postType: type,
     subject,
@@ -54,7 +54,7 @@ export async function saveCampaign(id: string, formData: FormData) {
   const scheduledIso = String(formData.get("scheduledFor") ?? "");
   const scheduledFor = scheduledIso ? new Date(scheduledIso).getTime() : null;
 
-  updateCampaign(id, {
+  await updateCampaign(id, {
     subject,
     preheader,
     personalNote: personalNote || null,
@@ -67,9 +67,9 @@ export async function saveCampaign(id: string, formData: FormData) {
 
 export async function scheduleCampaign(id: string) {
   await requireOwner();
-  const c = findCampaign(id);
+  const c = await findCampaign(id);
   if (!c || !c.scheduledFor) return;
-  updateCampaign(id, { status: "scheduled" });
+  await updateCampaign(id, { status: "scheduled" });
   revalidatePath(`/admin/campaigns/${id}`);
   revalidatePath("/admin/campaigns");
 }
@@ -83,7 +83,7 @@ export async function sendCampaignNow(id: string) {
 
 export async function sendTestEmail(id: string, to: string) {
   await requireOwner();
-  const c = findCampaign(id);
+  const c = await findCampaign(id);
   if (!c) return;
   const url = `${env.BETTER_AUTH_URL}/${c.postType === "musing" ? "musings" : "shorts"}/${c.postSlug}`;
   const post = c.postType === "musing" ? findMusing(c.postSlug) : findShort(c.postSlug);
@@ -97,6 +97,7 @@ export async function sendTestEmail(id: string, to: string) {
     number,
     publicUrl: url,
     unsubscribeUrl: `${env.BETTER_AUTH_URL}/api/unsubscribe?token=test`,
+    campaignId: null,
   });
 }
 
@@ -106,7 +107,7 @@ export async function sendTestEmail(id: string, to: string) {
  */
 export async function renderCampaignPreview(id: string): Promise<string> {
   await requireOwner();
-  const c = findCampaign(id);
+  const c = await findCampaign(id);
   if (!c) return "<p>not found</p>";
   const post = c.postType === "musing" ? findMusing(c.postSlug) : findShort(c.postSlug);
   const publicUrl = `${env.BETTER_AUTH_URL}/${c.postType === "musing" ? "musings" : "shorts"}/${c.postSlug}`;
@@ -128,13 +129,13 @@ export async function renderCampaignPreview(id: string): Promise<string> {
 export async function sendCampaignById(
   id: string,
 ): Promise<{ sent: number; failed: number }> {
-  const c = findCampaign(id);
+  const c = await findCampaign(id);
   if (!c) return { sent: 0, failed: 0 };
   if (c.status === "sending" || c.status === "sent")
     return { sent: c.sentCount, failed: 0 };
 
-  updateCampaign(id, { status: "sending" });
-  const recipients = listActiveBySegment(c.segment);
+  await updateCampaign(id, { status: "sending" });
+  const recipients = await listActiveBySegment(c.segment);
   const post = c.postType === "musing" ? findMusing(c.postSlug) : findShort(c.postSlug);
   const publicUrl = `${env.BETTER_AUTH_URL}/${c.postType === "musing" ? "musings" : "shorts"}/${c.postSlug}`;
   const number = post?.number ?? 0;
@@ -153,15 +154,16 @@ export async function sendCampaignById(
         number,
         publicUrl,
         unsubscribeUrl,
+        campaignId: c.id,
       });
-      logEvent({
+      await logEvent({
         subscriberId: sub.id,
         campaignId: c.id,
         kind: "sent",
       });
       sent++;
     } catch (err) {
-      logEvent({
+      await logEvent({
         subscriberId: sub.id,
         campaignId: c.id,
         kind: "bounced",
@@ -170,7 +172,7 @@ export async function sendCampaignById(
       failed++;
     }
   }
-  markCampaignSent(c.id, sent, failed);
+  await markCampaignSent(c.id, sent, failed);
   return { sent, failed };
 }
 

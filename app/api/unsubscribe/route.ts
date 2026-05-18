@@ -8,12 +8,12 @@ export async function GET(req: Request) {
   if (!token) {
     return NextResponse.redirect(new URL("/unsubscribed?error=missing", url.origin));
   }
-  const sub = findByToken(token);
+  const sub = await findByToken(token);
   if (!sub) {
     return NextResponse.redirect(new URL("/unsubscribed?error=unknown", url.origin));
   }
-  unsubscribe(sub.id);
-  logEvent({
+  await unsubscribe(sub.id);
+  await logEvent({
     subscriberId: sub.id,
     campaignId: null,
     kind: "complained",

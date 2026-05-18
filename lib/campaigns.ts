@@ -1,6 +1,9 @@
 import "server-only";
 
-import { appDb, nowMs } from "./app-db";
+import { and, asc, desc, eq, isNotNull, lte, sql } from "drizzle-orm";
+
+import { db } from "./db";
+import { campaigns } from "@/db/schema";
 import { newId } from "./tokens";
 
 export type CampaignStatus = "draft" | "scheduled" | "sending" | "sent" | "failed";
@@ -26,85 +29,62 @@ export type Campaign = {
   updatedAt: number;
 };
 
-type Row = {
-  id: string;
-  post_slug: string;
-  post_type: "musing" | "short";
-  subject: string;
-  preheader: string;
-  personal_note: string | null;
-  body_snapshot: string;
-  segment: Segment;
-  scheduled_for: number | null;
-  status: CampaignStatus;
-  sent_at: number | null;
-  sent_count: number;
-  open_count: number;
-  click_count: number;
-  failed_count: number;
-  created_at: number;
-  updated_at: number;
-};
+type Row = typeof campaigns.$inferSelect;
 
 function rowToCampaign(r: Row): Campaign {
   return {
     id: r.id,
-    postSlug: r.post_slug,
-    postType: r.post_type,
+    postSlug: r.postSlug,
+    postType: r.postType as "musing" | "short",
     subject: r.subject,
     preheader: r.preheader,
-    personalNote: r.personal_note,
-    bodySnapshot: r.body_snapshot,
-    segment: r.segment,
-    scheduledFor: r.scheduled_for,
-    status: r.status,
-    sentAt: r.sent_at,
-    sentCount: r.sent_count,
-    openCount: r.open_count,
-    clickCount: r.click_count,
-    failedCount: r.failed_count,
-    createdAt: r.created_at,
-    updatedAt: r.updated_at,
+    personalNote: r.personalNote,
+    bodySnapshot: r.bodySnapshot,
+    segment: r.segment as Segment,
+    scheduledFor: r.scheduledFor?.getTime() ?? null,
+    status: r.status as CampaignStatus,
+    sentAt: r.sentAt?.getTime() ?? null,
+    sentCount: r.sentCount,
+    openCount: r.openCount,
+    clickCount: r.clickCount,
+    failedCount: r.failedCount,
+    createdAt: r.createdAt.getTime(),
+    updatedAt: r.updatedAt.getTime(),
   };
 }
 
-export function createCampaign(input: {
+export async function createCampaign(input: {
   postSlug: string;
   postType: "musing" | "short";
   subject: string;
   preheader: string;
   bodySnapshot: string;
-}): Campaign {
-  const id = newId();
-  const t = nowMs();
-  appDb
-    .prepare(
-      `INSERT INTO campaigns (
-         id, post_slug, post_type, subject, preheader, body_snapshot,
-         segment, status, created_at, updated_at
-       ) VALUES (?, ?, ?, ?, ?, ?, 'weekly', 'draft', ?, ?)`,
-    )
-    .run(
-      id,
-      input.postSlug,
-      input.postType,
-      input.subject,
-      input.preheader,
-      input.bodySnapshot,
-      t,
-      t,
-    );
-  return findCampaign(id)!;
+}): Promise<Campaign> {
+  const now = new Date();
+  const [row] = await db
+    .insert(campaigns)
+    .values({
+      id: newId(),
+      postSlug: input.postSlug,
+      postType: input.postType,
+      subject: input.subject,
+      preheader: input.preheader,
+      bodySnapshot: input.bodySnapshot,
+      segment: "weekly",
+      status: "draft",
+      createdAt: now,
+      updatedAt: now,
+    })
+    .returning();
+  return rowToCampaign(row!);
 }
 
-export function findCampaign(id: string): Campaign | null {
-  const row = appDb.prepare("SELECT * FROM campaigns WHERE id = ?").get(id) as
-    | Row
-    | undefined;
+export async function findCampaign(id: string): Promise<Campaign | null> {
+  const [row] = await db.select().from(campaigns).where(eq(campaigns.id, id));
   return row ? rowToCampaign(row) : null;
 }
 
-export function updateCampaign(
+export async function updateCampaign(
   id: string,
   patch: Partial<{
     subject: string;
@@ -115,93 +95,76 @@ export function updateCampaign(
     scheduledFor: number | null;
     status: CampaignStatus;
   }>,
-): void {
-  const sets: string[] = [];
-  const params: unknown[] = [];
-  if (patch.subject !== undefined) {
-    sets.push("subject = ?");
-    params.push(patch.subject);
-  }
-  if (patch.preheader !== undefined) {
-    sets.push("preheader = ?");
-    params.push(patch.preheader);
-  }
-  if (patch.personalNote !== undefined) {
-    sets.push("personal_note = ?");
-    params.push(patch.personalNote);
-  }
-  if (patch.bodySnapshot !== undefined) {
-    sets.push("body_snapshot = ?");
-    params.push(patch.bodySnapshot);
-  }
-  if (patch.segment !== undefined) {
-    sets.push("segment = ?");
-    params.push(patch.segment);
-  }
+): Promise<void> {
+  const values: Record<string, unknown> = { updatedAt: new Date() };
+  if (patch.subject !== undefined) values.subject = patch.subject;
+  if (patch.preheader !== undefined) values.preheader = patch.preheader;
+  if (patch.personalNote !== undefined) values.personalNote = patch.personalNote;
+  if (patch.bodySnapshot !== undefined) values.bodySnapshot = patch.bodySnapshot;
+  if (patch.segment !== undefined) values.segment = patch.segment;
   if (patch.scheduledFor !== undefined) {
-    sets.push("scheduled_for = ?");
-    params.push(patch.scheduledFor);
+    values.scheduledFor =
+      patch.scheduledFor !== null ? new Date(patch.scheduledFor) : null;
   }
-  if (patch.status !== undefined) {
-    sets.push("status = ?");
-    params.push(patch.status);
-  }
-  if (sets.length === 0) return;
-  sets.push("updated_at = ?");
-  params.push(nowMs());
-  params.push(id);
-  appDb.prepare(`UPDATE campaigns SET ${sets.join(", ")} WHERE id = ?`).run(...params);
+  if (patch.status !== undefined) values.status = patch.status;
+  if (Object.keys(values).length === 1) return; // only updatedAt
+  await db.update(campaigns).set(values).where(eq(campaigns.id, id));
 }
 
-export function markCampaignSent(
+export async function markCampaignSent(
   id: string,
   sentCount: number,
   failedCount: number,
-): void {
-  appDb
-    .prepare(
-      `UPDATE campaigns
-       SET status = ?, sent_at = ?, sent_count = ?, failed_count = ?, updated_at = ?
-       WHERE id = ?`,
-    )
-    .run(
-      failedCount > sentCount ? "failed" : "sent",
-      nowMs(),
+): Promise<void> {
+  const status = failedCount > sentCount ? "failed" : "sent";
+  await db
+    .update(campaigns)
+    .set({
+      status,
+      sentAt: new Date(),
       sentCount,
       failedCount,
-      nowMs(),
-      id,
-    );
+      updatedAt: new Date(),
+    })
+    .where(eq(campaigns.id, id));
 }
 
-export function incrementCampaignCounter(
+export async function incrementCampaignCounter(
   id: string,
-  field: "open_count" | "click_count",
-): void {
-  appDb.prepare(`UPDATE campaigns SET ${field} = ${field} + 1 WHERE id = ?`).run(id);
+  field: "openCount" | "clickCount",
+): Promise<void> {
+  const col = field === "openCount" ? campaigns.openCount : campaigns.clickCount;
+  await db
+    .update(campaigns)
+    .set({ [field]: sql`${col} + 1` })
+    .where(eq(campaigns.id, id));
 }
 
-export function listCampaigns(): Campaign[] {
-  const rows = appDb
-    .prepare("SELECT * FROM campaigns ORDER BY created_at DESC")
-    .all() as Row[];
+export async function listCampaigns(): Promise<Campaign[]> {
+  const rows = await db.select().from(campaigns).orderBy(desc(campaigns.createdAt));
   return rows.map(rowToCampaign);
 }
 
-export function listSentCampaigns(): Campaign[] {
-  const rows = appDb
-    .prepare("SELECT * FROM campaigns WHERE status = 'sent' ORDER BY sent_at DESC")
-    .all() as Row[];
+export async function listSentCampaigns(): Promise<Campaign[]> {
+  const rows = await db
+    .select()
+    .from(campaigns)
+    .where(eq(campaigns.status, "sent"))
+    .orderBy(desc(campaigns.sentAt));
   return rows.map(rowToCampaign);
 }
 
-export function listDueScheduledCampaigns(): Campaign[] {
-  const rows = appDb
-    .prepare(
-      `SELECT * FROM campaigns
-       WHERE status = 'scheduled' AND scheduled_for IS NOT NULL AND scheduled_for <= ?
-       ORDER BY scheduled_for ASC`,
+export async function listDueScheduledCampaigns(): Promise<Campaign[]> {
+  const rows = await db
+    .select()
+    .from(campaigns)
+    .where(
+      and(
+        eq(campaigns.status, "scheduled"),
+        isNotNull(campaigns.scheduledFor),
+        lte(campaigns.scheduledFor, new Date()),
+      ),
     )
-    .all(nowMs()) as Row[];
+    .orderBy(asc(campaigns.scheduledFor));
   return rows.map(rowToCampaign);
 }

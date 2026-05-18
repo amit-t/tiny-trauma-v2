@@ -69,19 +69,18 @@ Then:
 
 - [ ] With `pnpm dev` running, add a new file
       `content/musings/test-round-trip.mdx` with valid frontmatter:
-      `     ---
-    title: "A test round trip"
-    dek: "Confirming the MDX pipeline picks up new files on save."
-    type: musing
-    publishedAt: 2026-05-17
-    number: 25
-    tags: [small humiliations]
-    status: published
-    ---
-    Just a few sentences. ==a small handwritten phrase== for good measure.
-    `
-      Expect: the file appears at `/musings/test-round-trip` and on the
-      `/musings` list within a second. Delete the file afterwards.
+      ` ---
+      title: "A test round trip"
+      dek: "Confirming the MDX pipeline picks up new files on save."
+      type: musing
+      publishedAt: 2026-05-17
+      number: 25
+      tags: [small humiliations]
+      status: published
+  ***
+  Just a few sentences. ==a small handwritten phrase== for good measure.
+  `    Expect: the file appears at`/musings/test-round-trip`and on the
+   `/musings` list within a second. Delete the file afterwards.
 - [ ] In `/admin/posts`, click "open in editor ↗" on any row. VS Code (or
       Cursor / Windsurf) should open the matching `content/<type>/<slug>.mdx`.
 - [ ] Edit the file body (add a paragraph), save, and watch the change
@@ -163,7 +162,110 @@ Cron in production (full automation lands in phase 6 / deploy):
 
 - [ ] Until the GitHub Actions workflow is wired, run the cron locally
       via the `send due now` button on `/admin/campaigns`, or:
-      ```
-      curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
-        https://<your-site>/api/cron/send-campaigns
-      ```
+      `     curl -X POST -H "Authorization: Bearer $CRON_SECRET" \
+      https://<your-site>/api/cron/send-campaigns
+    `
+
+---
+
+## Phase 6 · Polish + deploy
+
+### Local Postgres bring-up (one-time)
+
+The phase-6 cutover moved auth + app data from sqlite to Postgres via
+Drizzle. To run the app locally now:
+
+- [ ] Make sure Docker Desktop is running (the daemon was offline in
+      earlier agent sessions).
+- [ ] `pnpm db:up` — starts the postgres container from `docker-compose.yml`.
+- [ ] `pnpm db:migrate` — applies `db/migrations/0000_*.sql` (creates
+      `user`, `session`, `account`, `verification`, `subscribers`,
+      `campaigns`, `subscribe_events` tables).
+- [ ] (Optional) `pnpm db:studio` — Drizzle's web UI at
+      `https://local.drizzle.studio/` for poking at rows.
+- [ ] `pnpm dev` — should now boot without `.data/*.sqlite` files (the
+      sqlite scaffolding has been removed). Re-run phase 3 + phase 5
+      end-to-end checks against the new Postgres backend if you want
+      parity confidence.
+
+### Admin polish review (in voice)
+
+Click through every admin route and confirm the copy reads in voice:
+
+- [ ] `/admin` — workshop dashboard shows real numbers (drafts,
+      scheduled, active subscribers, last sent). When everything is
+      zero, the empty line reads as a Sunday-morning observation, not a
+      "Welcome to your dashboard."
+- [ ] `/admin/posts` — read-only window into `content/`. Empty filter
+      states say _"no posts match this filter. probably for the best."_
+- [ ] `/admin/brainstorm` and `/admin/cross-post` — both deliberately
+      mark themselves _"later"_ and point at the local writing skill.
+- [ ] `/admin/campaigns` — `new campaign →`, `send due now` (greys out
+      when nothing is due), in-voice empty state.
+- [ ] `/admin/campaigns/[id]` — `send now` confirm reads
+      _"send to every active subscriber in this segment? it's going out
+      the door."_; on success, status reads _"sent. now go for a walk."_
+- [ ] `/admin/subscribers` — delete confirm reads
+      _"delete <email>? not coming back."_
+
+Throwing an exception in any admin route should hit `app/admin/error.tsx`
+(_"something broke. it's me, not you."_ + `try again` button).
+
+### Optional: Plausible
+
+If you set `PLAUSIBLE_DOMAIN` in `.env.local` (or App Platform env), the
+script appears in `<body>`. The "last 7 days" widget on the dashboard is
+not implemented yet — when you want it, ask the agent to add it as a
+small follow-up (the script ingestion is the only part that's wired).
+
+### GitHub Actions cron
+
+- [ ] Repo → Settings → Secrets and variables → Actions → add
+      `CRON_SECRET` (matches the App Platform env var) and `SITE_URL`
+      (e.g. `https://tinytrauma.in`).
+- [ ] `.github/workflows/cron-send-campaigns.yml` is committed; verify
+      via Actions tab → "cron-send-campaigns" → "Run workflow" → confirm
+      the curl POST hits `/api/cron/send-campaigns` and returns
+      `{"ok":true, …}`.
+
+### DigitalOcean deploy
+
+Follow `handoff/DEPLOY.md` end-to-end (1 through 7). Summary of the
+owner-only steps:
+
+- [ ] Create Managed Postgres cluster; create `tinytrauma` DB inside.
+- [ ] Create App Platform app from GitHub repo (`main`, autodeploy on).
+      Build = `pnpm install --frozen-lockfile && pnpm build`,
+      Run = `node .next/standalone/server.js`, port 3000.
+- [ ] Set every env var from `.env.local.example` in App Platform.
+      Mark secrets as encrypted.
+- [ ] Add `tinytrauma.in` as a domain in App Platform; add the matching
+      A/CNAME records in your DNS. Let's Encrypt cert auto-issues.
+- [ ] Add the App as a Trusted Source on the DB cluster; switch
+      `DATABASE_URL` to the VPC private connection string.
+- [ ] First-time migration: from your laptop, with the public DB URL +
+      your IP whitelisted: `DATABASE_URL=… pnpm db:migrate`. Remove the
+      whitelist after. Later deploys use a Pre-Deploy Job (see
+      `DEPLOY.md` 2d-B).
+- [ ] Resend domain: verify `tinytrauma.in` (DKIM, SPF, DMARC records in
+      DNS). Set `RESEND_FROM=hi@tinytrauma.in`.
+- [ ] Resend webhook: point at
+      `https://tinytrauma.in/api/webhooks/resend`, subscribe to the five
+      events, paste signing secret into App Platform env as
+      `RESEND_WEBHOOK_SECRET`.
+
+### Production smoke (after the deploy is up)
+
+- [ ] `https://tinytrauma.in/` — hero, fonts, theme toggle.
+- [ ] `/sign-in` → owner email → magic link → land on `/admin`.
+- [ ] `/admin/posts` — every seeded MDX file appears.
+- [ ] Subscribe a test email → confirm → check `/admin/subscribers`.
+- [ ] Create a campaign from a published essay → send test to yourself.
+
+### First real essay
+
+- [ ] `tiny-trauma-content` skill is already installed at
+      `.claude/skills/tiny-trauma-content/`. Open a Claude Code session
+      in the repo and invoke it. Brainstorm → draft → accept the MDX →
+      `git push`. DO rebuilds (~2 min). New essay live at
+      `https://tinytrauma.in/musings/<slug>`.

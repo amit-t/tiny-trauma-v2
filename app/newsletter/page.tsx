@@ -33,8 +33,8 @@ type PastEntry = {
  * Until then we fall back to the sample data so the page never reads empty
  * in dev.
  */
-function loadPastLetters(): PastEntry[] {
-  const sent = listSentCampaigns();
+async function loadPastLetters(): Promise<PastEntry[]> {
+  const sent = await listSentCampaigns();
   if (sent.length === 0) {
     return samplePastLetters.map((p) => ({
       key: `sample-${p.number}`,
@@ -291,8 +291,8 @@ export default function NewsletterPage() {
   );
 }
 
-function PastList() {
-  const items = loadPastLetters();
+async function PastList() {
+  const items = await loadPastLetters();
   return (
     <div className="past-list">
       {items.map((p) => (

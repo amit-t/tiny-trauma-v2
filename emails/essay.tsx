@@ -12,6 +12,11 @@ export type EssayEmailProps = {
   number: number;
   publicUrl: string;
   unsubscribeUrl: string;
+  /**
+   * Optional. The send helper forwards this to Resend as a tag so the
+   * webhook can attribute opens/clicks/bounces back to the right campaign.
+   */
+  campaignId?: string | null;
 };
 
 /**

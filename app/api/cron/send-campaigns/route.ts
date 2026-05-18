@@ -29,7 +29,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
   }
 
-  const due = listDueScheduledCampaigns();
+  const due = await listDueScheduledCampaigns();
   let sent = 0;
   let failed = 0;
   for (const c of due) {

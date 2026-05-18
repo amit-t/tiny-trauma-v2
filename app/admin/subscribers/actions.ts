@@ -11,8 +11,8 @@ import { logEvent } from "@/lib/events";
 
 export async function unsubscribeSubscriber(id: string) {
   await requireOwner();
-  unsubscribeRow(id);
-  logEvent({
+  await unsubscribeRow(id);
+  await logEvent({
     subscriberId: id,
     campaignId: null,
     kind: "complained",
@@ -23,13 +23,13 @@ export async function unsubscribeSubscriber(id: string) {
 
 export async function deleteSubscriberAction(id: string) {
   await requireOwner();
-  deleteSubscriberRow(id);
+  await deleteSubscriberRow(id);
   revalidatePath("/admin/subscribers");
 }
 
 export async function exportSubscribersCsv() {
   await requireOwner();
-  const rows = listAllSubscribers();
+  const rows = await listAllSubscribers();
   const header = [
     "email",
     "first_name",

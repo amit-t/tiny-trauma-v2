@@ -59,14 +59,14 @@ export function CampaignEditor({ campaign, previewHtml, actions }: CampaignEdito
   function handleSendNow() {
     if (
       !window.confirm(
-        "send to every active subscriber in this segment? this can't be undone.",
+        "send to every active subscriber in this segment? it's going out the door.",
       )
     ) {
       return;
     }
     startTransition(async () => {
       await actions.sendNow();
-      setStatus("sending — refresh to see the count.");
+      setStatus("sent. now go for a walk.");
     });
   }
 

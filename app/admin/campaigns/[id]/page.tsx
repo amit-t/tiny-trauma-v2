@@ -17,7 +17,7 @@ export default async function CampaignDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const c = findCampaign(id);
+  const c = await findCampaign(id);
   if (!c) notFound();
 
   const previewHtml = await renderCampaignPreview(id);

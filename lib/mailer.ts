@@ -22,11 +22,13 @@ async function send({
   subject,
   html,
   text,
+  tags,
 }: {
   to: string;
   subject: string;
   html: string;
   text: string;
+  tags?: { name: string; value: string }[];
 }) {
   return client().emails.send({
     from: env.RESEND_FROM,
@@ -35,6 +37,7 @@ async function send({
     subject,
     html,
     text,
+    tags,
   });
 }
 
@@ -78,5 +81,8 @@ export async function sendWelcomeEmail(
 export async function sendEssayEmail(to: string, props: EssayEmailProps): Promise<void> {
   const html = await render(EssayEmail(props));
   const text = `${props.subject}\n\n${props.publicUrl}\n\nunsubscribe: ${props.unsubscribeUrl}`;
-  await send({ to, subject: props.subject, html, text });
+  const tags = props.campaignId
+    ? [{ name: "campaign_id", value: props.campaignId }]
+    : undefined;
+  await send({ to, subject: props.subject, html, text, tags });
 }

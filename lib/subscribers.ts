@@ -1,6 +1,9 @@
 import "server-only";
 
-import { appDb, nowMs } from "./app-db";
+import { and, asc, desc, eq, inArray, notInArray, sql } from "drizzle-orm";
+
+import { db } from "./db";
+import { subscribers } from "@/db/schema";
 import { newId, newToken } from "./tokens";
 
 export type SubscriberStatus =
@@ -25,31 +28,20 @@ export type Subscriber = {
   unsubscribedAt: number | null;
 };
 
-type Row = {
-  id: string;
-  email: string;
-  first_name: string | null;
-  tier: SubscriberTier;
-  status: SubscriberStatus;
-  source: string | null;
-  unsubscribe_token: string;
-  created_at: number;
-  confirmed_at: number | null;
-  unsubscribed_at: number | null;
-};
+type Row = typeof subscribers.$inferSelect;
 
 function rowToSubscriber(r: Row): Subscriber {
   return {
     id: r.id,
     email: r.email,
-    firstName: r.first_name,
-    tier: r.tier,
-    status: r.status,
+    firstName: r.firstName,
+    tier: r.tier as SubscriberTier,
+    status: r.status as SubscriberStatus,
     source: r.source,
-    unsubscribeToken: r.unsubscribe_token,
-    createdAt: r.created_at,
-    confirmedAt: r.confirmed_at,
-    unsubscribedAt: r.unsubscribed_at,
+    unsubscribeToken: r.unsubscribeToken,
+    createdAt: r.createdAt.getTime(),
+    confirmedAt: r.confirmedAt?.getTime() ?? null,
+    unsubscribedAt: r.unsubscribedAt?.getTime() ?? null,
   };
 }
 
@@ -60,16 +52,17 @@ function rowToSubscriber(r: Row): Subscriber {
  *   - unsubscribed  → revives to pending and rotates the token
  *   - bounced/complained → returns existing without resending
  */
-export function createOrRefreshSubscriber(input: {
+export async function createOrRefreshSubscriber(input: {
   email: string;
   firstName?: string;
   tier: SubscriberTier;
   source?: string;
-}): { subscriber: Subscriber; shouldSendConfirm: boolean } {
+}): Promise<{ subscriber: Subscriber; shouldSendConfirm: boolean }> {
   const email = input.email.trim().toLowerCase();
-  const existing = appDb
-    .prepare("SELECT * FROM subscribers WHERE email = ?")
-    .get(email) as Row | undefined;
+  const [existing] = await db
+    .select()
+    .from(subscribers)
+    .where(eq(subscribers.email, email));
 
   if (existing) {
     if (existing.status === "active") {
@@ -78,141 +71,129 @@ export function createOrRefreshSubscriber(input: {
     if (existing.status === "bounced" || existing.status === "complained") {
       return { subscriber: rowToSubscriber(existing), shouldSendConfirm: false };
     }
-    // pending or unsubscribed — refresh.
-    const token = newToken();
-    appDb
-      .prepare(
-        `UPDATE subscribers
-         SET status = 'pending',
-             unsubscribe_token = ?,
-             unsubscribed_at = NULL,
-             tier = COALESCE(?, tier),
-             first_name = COALESCE(?, first_name),
-             source = COALESCE(?, source)
-         WHERE id = ?`,
-      )
-      .run(token, input.tier, input.firstName ?? null, input.source ?? null, existing.id);
-    const refreshed = appDb
-      .prepare("SELECT * FROM subscribers WHERE id = ?")
-      .get(existing.id) as Row;
-    return { subscriber: rowToSubscriber(refreshed), shouldSendConfirm: true };
+    const [refreshed] = await db
+      .update(subscribers)
+      .set({
+        status: "pending",
+        unsubscribeToken: newToken(),
+        unsubscribedAt: null,
+        tier: input.tier ?? existing.tier,
+        firstName: input.firstName ?? existing.firstName,
+        source: input.source ?? existing.source,
+      })
+      .where(eq(subscribers.id, existing.id))
+      .returning();
+    return { subscriber: rowToSubscriber(refreshed!), shouldSendConfirm: true };
   }
 
-  const id = newId();
-  const token = newToken();
-  appDb
-    .prepare(
-      `INSERT INTO subscribers (
-         id, email, first_name, tier, status, source,
-         unsubscribe_token, created_at
-       ) VALUES (?, ?, ?, ?, 'pending', ?, ?, ?)`,
-    )
-    .run(
-      id,
+  const [row] = await db
+    .insert(subscribers)
+    .values({
+      id: newId(),
       email,
-      input.firstName ?? null,
-      input.tier,
-      input.source ?? null,
-      token,
-      nowMs(),
+      firstName: input.firstName ?? null,
+      tier: input.tier,
+      status: "pending",
+      source: input.source ?? null,
+      unsubscribeToken: newToken(),
+      createdAt: new Date(),
+    })
+    .returning();
+  return { subscriber: rowToSubscriber(row!), shouldSendConfirm: true };
+}
+
+export async function findByToken(token: string): Promise<Subscriber | null> {
+  const [row] = await db
+    .select()
+    .from(subscribers)
+    .where(eq(subscribers.unsubscribeToken, token));
+  return row ? rowToSubscriber(row) : null;
+}
+
+export async function findById(id: string): Promise<Subscriber | null> {
+  const [row] = await db.select().from(subscribers).where(eq(subscribers.id, id));
+  return row ? rowToSubscriber(row) : null;
+}
+
+export async function findByEmail(email: string): Promise<Subscriber | null> {
+  const [row] = await db
+    .select()
+    .from(subscribers)
+    .where(eq(subscribers.email, email.trim().toLowerCase()));
+  return row ? rowToSubscriber(row) : null;
+}
+
+export async function confirmSubscriber(id: string): Promise<void> {
+  await db
+    .update(subscribers)
+    .set({ status: "active", confirmedAt: new Date() })
+    .where(and(eq(subscribers.id, id), eq(subscribers.status, "pending")));
+}
+
+export async function unsubscribe(id: string): Promise<void> {
+  await db
+    .update(subscribers)
+    .set({ status: "unsubscribed", unsubscribedAt: new Date() })
+    .where(eq(subscribers.id, id));
+}
+
+export async function deleteSubscriber(id: string): Promise<void> {
+  await db.delete(subscribers).where(eq(subscribers.id, id));
+}
+
+export async function markBounced(email: string): Promise<void> {
+  await db
+    .update(subscribers)
+    .set({ status: "bounced" })
+    .where(
+      and(
+        eq(subscribers.email, email.trim().toLowerCase()),
+        notInArray(subscribers.status, ["unsubscribed", "complained"]),
+      ),
     );
-  const row = appDb.prepare("SELECT * FROM subscribers WHERE id = ?").get(id) as Row;
-  return { subscriber: rowToSubscriber(row), shouldSendConfirm: true };
 }
 
-export function findByToken(token: string): Subscriber | null {
-  const row = appDb
-    .prepare("SELECT * FROM subscribers WHERE unsubscribe_token = ?")
-    .get(token) as Row | undefined;
-  return row ? rowToSubscriber(row) : null;
+export async function markComplained(email: string): Promise<void> {
+  await db
+    .update(subscribers)
+    .set({ status: "complained" })
+    .where(eq(subscribers.email, email.trim().toLowerCase()));
 }
 
-export function findById(id: string): Subscriber | null {
-  const row = appDb.prepare("SELECT * FROM subscribers WHERE id = ?").get(id) as
-    | Row
-    | undefined;
-  return row ? rowToSubscriber(row) : null;
-}
-
-export function findByEmail(email: string): Subscriber | null {
-  const row = appDb
-    .prepare("SELECT * FROM subscribers WHERE email = ?")
-    .get(email.trim().toLowerCase()) as Row | undefined;
-  return row ? rowToSubscriber(row) : null;
-}
-
-export function confirmSubscriber(id: string): void {
-  appDb
-    .prepare(
-      `UPDATE subscribers
-       SET status = 'active', confirmed_at = ?
-       WHERE id = ? AND status = 'pending'`,
-    )
-    .run(nowMs(), id);
-}
-
-export function unsubscribe(id: string): void {
-  appDb
-    .prepare(
-      `UPDATE subscribers
-       SET status = 'unsubscribed', unsubscribed_at = ?
-       WHERE id = ?`,
-    )
-    .run(nowMs(), id);
-}
-
-export function deleteSubscriber(id: string): void {
-  appDb.prepare("DELETE FROM subscribers WHERE id = ?").run(id);
-}
-
-export function markBounced(email: string): void {
-  appDb
-    .prepare(
-      `UPDATE subscribers SET status = 'bounced'
-       WHERE email = ? AND status NOT IN ('unsubscribed','complained')`,
-    )
-    .run(email.trim().toLowerCase());
-}
-
-export function markComplained(email: string): void {
-  appDb
-    .prepare(
-      `UPDATE subscribers SET status = 'complained'
-       WHERE email = ?`,
-    )
-    .run(email.trim().toLowerCase());
-}
-
-export function listAllSubscribers(): Subscriber[] {
-  const rows = appDb
-    .prepare("SELECT * FROM subscribers ORDER BY created_at DESC")
-    .all() as Row[];
+export async function listAllSubscribers(): Promise<Subscriber[]> {
+  const rows = await db.select().from(subscribers).orderBy(desc(subscribers.createdAt));
   return rows.map(rowToSubscriber);
 }
 
 export type Segment = "weekly" | "monthly" | "both" | "all";
 
-export function listActiveBySegment(segment: Segment): Subscriber[] {
-  let where = "status = 'active'";
-  const params: string[] = [];
-  if (segment === "weekly") {
-    where += " AND tier IN ('weekly','both')";
-  } else if (segment === "monthly") {
-    where += " AND tier IN ('monthly','both')";
-  } else if (segment === "both") {
-    where += " AND tier = 'both'";
-  }
-  // segment === 'all' → no extra filter beyond active.
-  const rows = appDb
-    .prepare(`SELECT * FROM subscribers WHERE ${where} ORDER BY created_at ASC`)
-    .all(...params) as Row[];
+export async function listActiveBySegment(segment: Segment): Promise<Subscriber[]> {
+  const tierFilter =
+    segment === "weekly"
+      ? inArray(subscribers.tier, ["weekly", "both"])
+      : segment === "monthly"
+        ? inArray(subscribers.tier, ["monthly", "both"])
+        : segment === "both"
+          ? eq(subscribers.tier, "both")
+          : undefined;
+
+  const rows = await db
+    .select()
+    .from(subscribers)
+    .where(
+      tierFilter
+        ? and(eq(subscribers.status, "active"), tierFilter)
+        : eq(subscribers.status, "active"),
+    )
+    .orderBy(asc(subscribers.createdAt));
   return rows.map(rowToSubscriber);
 }
 
-export function countByStatus(): Record<SubscriberStatus, number> {
-  const rows = appDb
-    .prepare("SELECT status, COUNT(*) AS n FROM subscribers GROUP BY status")
-    .all() as { status: SubscriberStatus; n: number }[];
+export async function countByStatus(): Promise<Record<SubscriberStatus, number>> {
+  const rows = await db
+    .select({ status: subscribers.status, n: sql<number>`count(*)::int` })
+    .from(subscribers)
+    .groupBy(subscribers.status);
   const out: Record<SubscriberStatus, number> = {
     pending: 0,
     active: 0,
@@ -220,6 +201,6 @@ export function countByStatus(): Record<SubscriberStatus, number> {
     bounced: 0,
     complained: 0,
   };
-  for (const r of rows) out[r.status] = r.n;
+  for (const r of rows) out[r.status as SubscriberStatus] = r.n;
   return out;
 }

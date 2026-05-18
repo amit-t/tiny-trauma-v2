@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: msg }, { status: 400 });
   }
 
-  const { subscriber, shouldSendConfirm } = createOrRefreshSubscriber({
+  const { subscriber, shouldSendConfirm } = await createOrRefreshSubscriber({
     email: parsed.data.email,
     firstName: parsed.data.firstName,
     tier: parsed.data.tier,
@@ -51,7 +51,7 @@ export async function POST(req: Request) {
     } catch (err) {
       // Don't 500 the user — they can re-submit. Log the failure as an event
       // so /admin can see the attempt.
-      logEvent({
+      await logEvent({
         subscriberId: subscriber.id,
         campaignId: null,
         kind: "bounced",

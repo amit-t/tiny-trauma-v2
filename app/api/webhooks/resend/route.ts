@@ -59,7 +59,7 @@ export async function POST(req: Request) {
   }
 
   const to = evt.data?.to?.[0] ?? null;
-  const sub = to ? findByEmail(to) : null;
+  const sub = to ? await findByEmail(to) : null;
   const subscriberId = sub?.id ?? null;
 
   // Campaign id is embedded as a Resend tag when we send below; falls back to
@@ -68,28 +68,28 @@ export async function POST(req: Request) {
 
   switch (evt.type) {
     case "email.delivered":
-      logEvent({ subscriberId, campaignId, kind: "delivered" });
+      await logEvent({ subscriberId, campaignId, kind: "delivered" });
       break;
     case "email.opened":
-      logEvent({ subscriberId, campaignId, kind: "opened" });
-      if (campaignId) incrementCampaignCounter(campaignId, "open_count");
+      await logEvent({ subscriberId, campaignId, kind: "opened" });
+      if (campaignId) await incrementCampaignCounter(campaignId, "openCount");
       break;
     case "email.clicked":
-      logEvent({ subscriberId, campaignId, kind: "clicked" });
-      if (campaignId) incrementCampaignCounter(campaignId, "click_count");
+      await logEvent({ subscriberId, campaignId, kind: "clicked" });
+      if (campaignId) await incrementCampaignCounter(campaignId, "clickCount");
       break;
     case "email.bounced":
-      logEvent({
+      await logEvent({
         subscriberId,
         campaignId,
         kind: "bounced",
         meta: { bounceType: evt.data?.bounce_type },
       });
-      if (to && evt.data?.bounce_type === "hard") markBounced(to);
+      if (to && evt.data?.bounce_type === "hard") await markBounced(to);
       break;
     case "email.complained":
-      logEvent({ subscriberId, campaignId, kind: "complained" });
-      if (to) markComplained(to);
+      await logEvent({ subscriberId, campaignId, kind: "complained" });
+      if (to) await markComplained(to);
       break;
   }
 

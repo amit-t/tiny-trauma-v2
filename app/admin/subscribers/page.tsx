@@ -6,8 +6,9 @@ import { countByStatus, listAllSubscribers } from "@/lib/subscribers";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminSubscribersPage() {
-  const rows: SubscriberRow[] = listAllSubscribers().map((s) => ({
+export default async function AdminSubscribersPage() {
+  const [list, counts] = await Promise.all([listAllSubscribers(), countByStatus()]);
+  const rows: SubscriberRow[] = list.map((s) => ({
     id: s.id,
     email: s.email,
     firstName: s.firstName,
@@ -16,7 +17,6 @@ export default function AdminSubscribersPage() {
     source: s.source,
     createdAt: new Date(s.createdAt).toISOString(),
   }));
-  const counts = countByStatus();
   const total = rows.length;
 
   return (

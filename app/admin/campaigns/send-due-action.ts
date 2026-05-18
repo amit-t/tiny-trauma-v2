@@ -11,7 +11,7 @@ export async function sendDueScheduledCampaigns(): Promise<{
   failed: number;
 }> {
   await requireOwner();
-  const due = listDueScheduledCampaigns();
+  const due = await listDueScheduledCampaigns();
   let sent = 0;
   let failed = 0;
   for (const c of due) {

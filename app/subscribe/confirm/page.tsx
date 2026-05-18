@@ -27,7 +27,7 @@ export default async function ConfirmPage({
     return <Result kind="missing" />;
   }
 
-  const sub = findByToken(token);
+  const sub = await findByToken(token);
   if (!sub) {
     return <Result kind="unknown" />;
   }
@@ -36,7 +36,7 @@ export default async function ConfirmPage({
   // double-clicks (we only confirm if status was pending).
   const wasPending = sub.status === "pending";
   if (wasPending) {
-    confirmSubscriber(sub.id);
+    await confirmSubscriber(sub.id);
     const starters = getPublishedMusings()
       .slice(0, 3)
       .map((m) => ({
@@ -46,14 +46,14 @@ export default async function ConfirmPage({
     const unsubscribeUrl = `${env.BETTER_AUTH_URL}/api/unsubscribe?token=${sub.unsubscribeToken}`;
     try {
       await sendWelcomeEmail(sub.email, { starterEssays: starters, unsubscribeUrl });
-      logEvent({
+      await logEvent({
         subscriberId: sub.id,
         campaignId: null,
         kind: "delivered",
         meta: { stage: "welcome-send" },
       });
     } catch (err) {
-      logEvent({
+      await logEvent({
         subscriberId: sub.id,
         campaignId: null,
         kind: "bounced",

@@ -60,7 +60,7 @@ export function SubscribersTable({ rows }: { rows: SubscriberRow[] }) {
   }
 
   function handleDelete(id: string, email: string) {
-    if (!window.confirm(`delete ${email}? this can't be undone.`)) return;
+    if (!window.confirm(`delete ${email}? not coming back.`)) return;
     startTransition(async () => {
       await deleteSubscriberAction(id);
     });

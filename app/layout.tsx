@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { body, display, hand } from "@/lib/fonts";
+import { env } from "@/lib/env";
 import "./globals.css";
 
 const DESCRIPTION =
@@ -36,7 +38,16 @@ export default function RootLayout({
       data-theme="dark"
       className={`${display.variable} ${body.variable} ${hand.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        {children}
+        {env.PLAUSIBLE_DOMAIN ? (
+          <Script
+            strategy="afterInteractive"
+            data-domain={env.PLAUSIBLE_DOMAIN}
+            src="https://plausible.io/js/script.js"
+          />
+        ) : null}
+      </body>
     </html>
   );
 }

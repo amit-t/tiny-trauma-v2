@@ -4,9 +4,8 @@ import { SendDueButton } from "./send-due-button";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminCampaignsPage() {
-  const all = listCampaigns();
-  const due = listDueScheduledCampaigns();
+export default async function AdminCampaignsPage() {
+  const [all, due] = await Promise.all([listCampaigns(), listDueScheduledCampaigns()]);
 
   return (
     <div>
