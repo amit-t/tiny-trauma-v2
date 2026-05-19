@@ -16,8 +16,11 @@ import * as schema from "@/db/schema";
  */
 // DO Managed Postgres serves a self-signed CA, so postgres-js's default
 // strict verification fails. Relax only for managed hosts; local docker
-// dev still runs over plain TCP without TLS.
-const isManagedPg = env.DATABASE_URL.includes("ondigitalocean.com");
+// dev still runs over plain TCP without TLS. Read from process.env
+// (not the validated `env`) because this module also evaluates at build
+// time during page-data collection, where SKIP_ENV_VALIDATION leaves
+// env.DATABASE_URL undefined.
+const isManagedPg = (process.env.DATABASE_URL ?? "").includes("ondigitalocean.com");
 
 const sql = postgres(env.DATABASE_URL, {
   max: 5,
