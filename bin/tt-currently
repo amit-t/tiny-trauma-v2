@@ -1,0 +1,97 @@
+#!/usr/bin/env zsh
+# tt-currently — update the homepage "currently" footer (reading / writing / noticing).
+#
+# Usage: tt-currently [--reading TEXT] [--writing TEXT] [--noticing TEXT]
+#                     [--engine claude|codex|gemini|devin] [--dry-run] [--help]
+#
+# At least one of --reading/--writing/--noticing must be provided.
+# Empty string is a valid value — it clears (hides) that row on the site.
+
+set -u
+script_path=${0:A}
+source "${script_path:h}/_tt-engine.zsh"
+
+usage() {
+  cat <<'EOF'
+tt-currently — update the homepage "currently" footer rows.
+
+Usage:
+  tt-currently [--reading TEXT] [--writing TEXT] [--noticing TEXT] [--engine ENGINE] [--dry-run]
+
+Options:
+  --reading TEXT    Set the "reading" row. Empty string hides the row.
+  --writing TEXT    Set the "writing" row. Empty string hides the row.
+  --noticing TEXT   Set the "noticing" row. Empty string hides the row.
+  --engine ENGINE   claude | codex | gemini | devin (default: $TT_ENGINE or claude)
+  --dry-run         Print resolved prompt + engine command, do not execute.
+  -h, --help        Show this help.
+
+At least one of --reading / --writing / --noticing is required.
+Use single quotes around values containing asterisks (e.g. '*Bleak House*').
+EOF
+}
+
+# This binary takes its own typed flags (--reading/--writing/--noticing) in
+# addition to the common ones. Parse those first, then pass the residual
+# arg list through tt_parse_common_flags.
+
+typeset reading_set=0 writing_set=0 noticing_set=0
+typeset reading_val="" writing_val="" noticing_val=""
+typeset -a residual
+residual=()
+
+while (( $# > 0 )); do
+  case "$1" in
+    --reading)
+      if (( $# < 2 )); then
+        print -ru2 -- "error: --reading requires a value (use '' to clear)"
+        exit 2
+      fi
+      reading_set=1; reading_val="$2"; shift 2 ;;
+    --reading=*)
+      reading_set=1; reading_val="${1#--reading=}"; shift ;;
+    --writing)
+      if (( $# < 2 )); then
+        print -ru2 -- "error: --writing requires a value (use '' to clear)"
+        exit 2
+      fi
+      writing_set=1; writing_val="$2"; shift 2 ;;
+    --writing=*)
+      writing_set=1; writing_val="${1#--writing=}"; shift ;;
+    --noticing)
+      if (( $# < 2 )); then
+        print -ru2 -- "error: --noticing requires a value (use '' to clear)"
+        exit 2
+      fi
+      noticing_set=1; noticing_val="$2"; shift 2 ;;
+    --noticing=*)
+      noticing_set=1; noticing_val="${1#--noticing=}"; shift ;;
+    *)
+      residual+=("$1"); shift ;;
+  esac
+done
+
+tt_parse_common_flags "${residual[@]}" || exit $?
+if (( TT_HELP_REQUESTED )); then usage; exit 0; fi
+
+if (( ${#TT_REST[@]} > 0 )); then
+  print -ru2 -- "error: unexpected args: ${TT_REST[*]}"
+  usage >&2
+  exit 2
+fi
+
+if (( reading_set + writing_set + noticing_set == 0 )); then
+  print -ru2 -- "error: provide at least one of --reading / --writing / --noticing"
+  usage >&2
+  exit 2
+fi
+
+# Build the prompt — include only the rows the user explicitly set.
+typeset -a parts
+(( reading_set ))  && parts+=("reading=\"${reading_val}\"")
+(( writing_set ))  && parts+=("writing=\"${writing_val}\"")
+(( noticing_set )) && parts+=("noticing=\"${noticing_val}\"")
+joined="${(j:, :)parts}"
+
+prompt=$(tt_build_prompt "Run the .agent/skills/tt-currently skill. Set ${joined}. Leave any unspecified row unchanged.")
+tt_run_engine "$prompt"

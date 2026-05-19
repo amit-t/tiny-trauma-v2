@@ -1,0 +1,37 @@
+#!/usr/bin/env zsh
+# tt-brainstorm — open the Tiny Trauma brainstorm flow (no file output).
+#
+# Usage: tt-brainstorm [--engine claude|codex|gemini|devin] [--dry-run] [--help]
+#        echo "seed thought" | tt-brainstorm
+
+set -u
+script_path=${0:A}
+source "${script_path:h}/_tt-engine.zsh"
+
+usage() {
+  cat <<'EOF'
+tt-brainstorm — Tiny Trauma brainstorm flow (idea exploration, no MDX file).
+
+Usage:
+  tt-brainstorm [--engine ENGINE] [--dry-run]
+  echo "seed" | tt-brainstorm
+
+Options:
+  --engine ENGINE   claude | codex | gemini | devin (default: $TT_ENGINE or claude)
+  --dry-run         Print resolved prompt + engine command, do not execute.
+  -h, --help        Show this help.
+
+Stdin (when piped) is appended to the prompt as Extra context.
+EOF
+}
+
+tt_parse_common_flags "$@" || exit $?
+if (( TT_HELP_REQUESTED )); then usage; exit 0; fi
+if (( ${#TT_REST[@]} > 0 )); then
+  print -ru2 -- "error: unexpected args: ${TT_REST[*]}"
+  usage >&2
+  exit 2
+fi
+
+prompt=$(tt_build_prompt "Run the .agent/skills/tiny-trauma-content skill with mode=brainstorm.")
+tt_run_engine "$prompt"
