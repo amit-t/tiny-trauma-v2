@@ -13,7 +13,7 @@
 # Code pushes to `main` auto-deploy via the `github.deploy_on_push` flag.
 
 name: tiny-trauma
-region: nyc
+region: blr
 
 domains:
   - domain: tinytrauma.com
@@ -29,7 +29,7 @@ services:
     source_dir: /
     environment_slug: node-js
     instance_count: 1
-    instance_size_slug: basic-xxs
+    instance_size_slug: apps-s-1vcpu-0.5gb
     http_port: 3000
     build_command: pnpm install --frozen-lockfile && pnpm build
     run_command: pnpm start
@@ -100,7 +100,7 @@ jobs:
     source_dir: /
     environment_slug: node-js
     instance_count: 1
-    instance_size_slug: basic-xxs
+    instance_size_slug: apps-s-1vcpu-0.5gb
     build_command: pnpm install --frozen-lockfile
     run_command: pnpm exec drizzle-kit migrate
     envs:
@@ -116,3 +116,5 @@ databases:
     # and a larger size when scaling up.
     production: false
     cluster_name: tiny-trauma-db
+    db_name: tinytrauma
+    db_user: tinytrauma
