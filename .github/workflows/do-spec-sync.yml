@@ -40,12 +40,15 @@ jobs:
         env:
           APP_ID: ${{ secrets.DO_APP_ID }}
 
+      - name: Validate repo spec
+        # The pre-merge repo spec has no `EV[...]` ciphertexts, so the
+        # propose-as-new validator accepts it. The merged file would not
+        # (it rejects pre-encrypted SECRET values), so we validate the
+        # input rather than the output.
+        run: doctl apps spec validate .do/app.yaml > /dev/null
+
       - name: Merge live SECRET ciphertexts into repo spec
-        run: |
-          set -euo pipefail
-          node scripts/do-spec-merge.mjs .do/app.yaml /tmp/live.yaml > /tmp/merged.yaml
-          # Sanity: confirm the merged spec parses.
-          doctl apps spec validate /tmp/merged.yaml > /dev/null
+        run: node scripts/do-spec-merge.mjs .do/app.yaml /tmp/live.yaml > /tmp/merged.yaml
 
       - name: Apply merged spec
         run: doctl apps update "$APP_ID" --spec /tmp/merged.yaml
