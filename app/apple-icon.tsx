@@ -1,0 +1,41 @@
+import { ImageResponse } from "next/og";
+import { loadFraunceSliceForIcon } from "@/lib/og-fonts";
+
+export const size = { width: 180, height: 180 };
+export const contentType = "image/png";
+
+export default async function AppleIcon() {
+  const { italic } = await loadFraunceSliceForIcon();
+
+  return new ImageResponse(
+    (
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "#f4efe3",
+          fontFamily: "Fraunces",
+          letterSpacing: "-0.04em",
+          fontSize: 156,
+          lineHeight: 1,
+        }}
+      >
+        <span style={{ color: "#1a1613", fontWeight: 700, fontStyle: "italic" }}>
+          t
+        </span>
+        <span style={{ color: "#b4471f", fontWeight: 700, fontStyle: "italic" }}>
+          t
+        </span>
+      </div>
+    ),
+    {
+      ...size,
+      fonts: [
+        { name: "Fraunces", data: italic, weight: 700, style: "italic" },
+      ],
+    },
+  );
+}
