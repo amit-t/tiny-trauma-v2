@@ -57,6 +57,25 @@ try {
   `;
   console.log(`[migrate] identity ${JSON.stringify(identity)}`);
 
+  const [{ search_path }] = await sql`SELECT current_setting('search_path') AS search_path`;
+  console.log(`[migrate] search_path=${search_path}`);
+
+  const schemas = await sql`
+    SELECT
+      nspname,
+      pg_get_userbyid(nspowner)                           AS owner,
+      has_schema_privilege(current_user, nspname, 'CREATE') AS can_create,
+      has_schema_privilege(current_user, nspname, 'USAGE')  AS can_use
+    FROM pg_namespace
+    WHERE nspname NOT LIKE 'pg_%' AND nspname <> 'information_schema'
+    ORDER BY nspname
+  `;
+  for (const s of schemas) {
+    console.log(
+      `[migrate] schema ${s.nspname} owner=${s.owner} create=${s.can_create} use=${s.can_use}`,
+    );
+  }
+
   await sql`
     CREATE TABLE IF NOT EXISTS public.__drizzle_migrations (
       id SERIAL PRIMARY KEY,
