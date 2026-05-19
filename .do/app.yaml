@@ -112,9 +112,8 @@ databases:
   - name: db
     engine: PG
     version: "16"
-    # Dev tier: 1 vCPU / 1GB / 10GB storage, ~$7/mo. Bump to `production: true`
-    # and a larger size when scaling up.
+    # Dev tier: 1 vCPU / 1GB / 10GB storage, ~$7/mo. Cluster name, db
+    # name, and db user must equal the component name on dev tier — DO
+    # rejects custom values. They become customisable once you flip
+    # `production: true` and pick a larger size.
     production: false
-    cluster_name: tiny-trauma-db
-    db_name: tinytrauma
-    db_user: tinytrauma
