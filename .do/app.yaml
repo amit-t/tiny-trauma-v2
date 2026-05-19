@@ -102,7 +102,10 @@ jobs:
     instance_count: 1
     instance_size_slug: apps-s-1vcpu-0.5gb
     build_command: pnpm install --frozen-lockfile
-    run_command: pnpm exec drizzle-kit migrate
+    # We don't use `drizzle-kit migrate` here because its spinner
+    # swallows postgres-js connection errors. Our own runner prints the
+    # error stack on failure so deploy-log post-mortems are possible.
+    run_command: node scripts/migrate.mjs
     envs:
       - key: DATABASE_URL
         value: ${db.DATABASE_URL}
