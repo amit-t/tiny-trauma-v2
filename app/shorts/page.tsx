@@ -17,7 +17,28 @@ const COVER_COLORS = ["a", "b", "c", "d", "e", "f"] as const;
 
 export default function ShortsPage() {
   const all = getPublishedShorts();
-  const featured = all.find((s) => s.featured) ?? all[0];
+
+  if (all.length === 0) {
+    return (
+      <SiteShell activeHref="/shorts">
+        <section className="page-intro">
+          <div className="kicker">
+            <span>shorts · 0 fictions · since aug 2024</span>
+          </div>
+          <h1>
+            Nothing here <em>yet.</em>
+          </h1>
+          <p className="lede">
+            New shorts land soon. In the meantime, the{" "}
+            <Link href="/newsletter">newsletter</Link> will let you know when the first
+            one drops.
+          </p>
+        </section>
+      </SiteShell>
+    );
+  }
+
+  const featured = all.find((s) => s.featured) ?? all[0]!;
   const rest = all.filter((s) => s.slug !== featured.slug);
 
   return (
