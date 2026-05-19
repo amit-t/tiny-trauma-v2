@@ -13,6 +13,13 @@ deployed.
   frontmatter (`heat`, `tone_tags`, `status`, `seed_type`, etc.) and a body
   block per analysis field (Friction, Seed line, Voice, Essay angle, Short
   angle, Notable quote, Raw caption).
+- `seeded-content/musings/` and `seeded-content/shorts/` — the original
+  boilerplate MDX essays + shorts that shipped with the design phase.
+  Moved out of `content/` so the deployed site launches empty and only
+  contains posts you've actually written. Kept around as voice reference
+  and as raw material you may want to revive or re-cast later — move a
+  file back into `content/musings/` (or `content/shorts/`) when you want
+  the site to publish it.
 
 ## Why it's git-tracked but not deployed
 
