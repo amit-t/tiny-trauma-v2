@@ -35,6 +35,25 @@ const MIGRATIONS_DIR = "db/migrations";
 const STATEMENT_BREAKPOINT = "--> statement-breakpoint";
 
 try {
+  // Diagnostic: who are we, what can we do? Dump this before any DDL so
+  // if a privilege error fires we can read it off the deploy log.
+  const [identity] = await sql`
+    SELECT
+      current_user                                    AS user,
+      current_database()                              AS db,
+      current_setting('server_version_num')           AS pg_version_num,
+      (SELECT rolname
+         FROM pg_database d
+         JOIN pg_authid a ON a.oid = d.datdba
+        WHERE d.datname = current_database())         AS db_owner,
+      has_database_privilege(current_user,
+                             current_database(),
+                             'CREATE')                AS can_create_in_db,
+      has_schema_privilege(current_user, 'public',
+                           'CREATE')                  AS can_create_in_public
+  `;
+  console.log(`[migrate] identity ${JSON.stringify(identity)}`);
+
   await sql`
     CREATE TABLE IF NOT EXISTS public.__drizzle_migrations (
       id SERIAL PRIMARY KEY,
