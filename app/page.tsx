@@ -26,9 +26,31 @@ const FILTERS: { label: string; count: number; active?: boolean }[] = [
 export default function Home() {
   const allMusings = getPublishedMusings();
   const allShorts = getPublishedShorts();
+
+  if (allMusings.length === 0 || allShorts.length === 0) {
+    return (
+      <SiteShell activeHref="/">
+        <section className="hero">
+          <div className="kicker">
+            <span className="pulse" aria-hidden />
+            <span>preparing the first essays</span>
+          </div>
+          <h1>
+            a small life, <em>mostly.</em>
+          </h1>
+          <p className="lede">
+            A personal blog about <HandInline>the small daily friction</HandInline>{" "}
+            between who you are and everything around you. The first essays land soon —{" "}
+            <Link href="/newsletter">subscribe</Link> to hear when.
+          </p>
+        </section>
+      </SiteShell>
+    );
+  }
+
   const recent = allMusings.slice(0, 4);
-  const featured = allShorts.find((s) => s.featured) ?? allShorts[0];
-  const lastPub = allMusings[0];
+  const featured = allShorts.find((s) => s.featured) ?? allShorts[0]!;
+  const lastPub = allMusings[0]!;
 
   return (
     <SiteShell activeHref="/">

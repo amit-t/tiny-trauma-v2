@@ -29,7 +29,28 @@ const FILTERS = [
 
 export default function MusingsPage() {
   const all = getPublishedMusings();
-  const pick = all.find((m) => m.featured) ?? all[0];
+
+  if (all.length === 0) {
+    return (
+      <SiteShell activeHref="/musings">
+        <section className="page-intro">
+          <div className="kicker">
+            <span>musings · 0 essays · since jan 2024</span>
+          </div>
+          <h1>
+            Nothing here <em>yet.</em>
+          </h1>
+          <p className="lede">
+            New essays land soon. In the meantime, the{" "}
+            <Link href="/newsletter">newsletter</Link> will let you know when the first
+            one goes live.
+          </p>
+        </section>
+      </SiteShell>
+    );
+  }
+
+  const pick = all.find((m) => m.featured) ?? all[0]!;
   const rest = all.filter((m) => m.slug !== pick.slug);
 
   const buckets = new Map<number, typeof rest>();

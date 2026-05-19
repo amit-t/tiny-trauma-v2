@@ -47,7 +47,7 @@ export default async function MusingPage({
   const idx = sorted.findIndex((x) => x.slug === m.slug);
   const prev = sorted[idx + 1];
   const shorts = getPublishedShorts();
-  const nextShort = shorts.find((s) => s.featured) ?? shorts[0];
+  const nextShort = shorts.find((s) => s.featured) ?? shorts[0] ?? null;
 
   return (
     <SiteShell activeHref="/musings">
@@ -132,10 +132,16 @@ export default async function MusingPage({
             ) : (
               <span />
             )}
-            <Link href={`/shorts/${nextShort.slug}`} className="next">
-              <div className="dir">next · short · no. {padNum(nextShort.number)} →</div>
-              <h4>{renderInline(nextShort.title)}</h4>
-            </Link>
+            {nextShort ? (
+              <Link href={`/shorts/${nextShort.slug}`} className="next">
+                <div className="dir">
+                  next · short · no. {padNum(nextShort.number)} →
+                </div>
+                <h4>{renderInline(nextShort.title)}</h4>
+              </Link>
+            ) : (
+              <span />
+            )}
           </nav>
         </div>
 
