@@ -101,12 +101,9 @@ tt_run_engine() {
       cmd=(gemini -p "$prompt")
       ;;
     devin)
-      # Devin CLI's non-interactive prompt subcommand has not been pinned in
-      # this repo yet — guard until the exact incantation is confirmed.
-      print -ru2 -- "error: --engine devin is not yet wired."
-      print -ru2 -- "       Confirm the Devin CLI's non-interactive prompt subcommand,"
-      print -ru2 -- "       then update tt_run_engine in bin/_tt-engine.zsh."
-      return 64
+      # Devin launches an interactive session and takes the initial prompt
+      # via `-- <PROMPT>`. The `--` separates options from the prompt body.
+      cmd=(devin -- "$prompt")
       ;;
     *)
       print -ru2 -- "error: unhandled engine '$engine' (internal bug)"

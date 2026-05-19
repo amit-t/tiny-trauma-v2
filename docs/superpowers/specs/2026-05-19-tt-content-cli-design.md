@@ -120,7 +120,7 @@ Sourced helper. Provides:
   | claude  | `claude "$prompt"`                             |
   | codex   | `codex exec "$prompt"`                         |
   | gemini  | `gemini -p "$prompt"`                          |
-  | devin   | `devin "$prompt"` *(placeholder — confirm exact subcommand during impl; if unknown, print a TODO error pointing the user at the Devin CLI docs)* |
+  | devin   | `devin -- "$prompt"` (launches an interactive session, prompt seeded via `--`) |
 
   When `TT_DRY_RUN=1`, prints the resolved command and prompt to stdout
   and exits 0 without invoking the engine.
@@ -219,6 +219,5 @@ scripted, run by Amit after merge.
 
 ## Open questions
 
-- Confirm exact Devin CLI subcommand for non-interactive prompt execution.
-  If unclear at implementation time, ship the script with a guarded error
-  for `--engine devin` and a TODO comment, rather than guessing.
+_None._ Devin is wired to launch an interactive session with the prompt
+seeded via `devin -- "$prompt"`.
