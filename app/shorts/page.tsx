@@ -18,13 +18,15 @@ const COVER_COLORS = ["a", "b", "c", "d", "e", "f"] as const;
 export default function ShortsPage() {
   const all = getPublishedShorts();
   const featured = all.find((s) => s.featured) ?? all[0];
-  const rest = all.filter((s) => s.slug !== featured.slug);
+  const rest = featured ? all.filter((s) => s.slug !== featured.slug) : [];
 
   return (
     <SiteShell activeHref="/shorts">
       <section className="page-intro">
         <div className="kicker">
-          <span>shorts · {all.length} fictions · since aug 2024</span>
+          <span>
+            shorts · {all.length} {all.length === 1 ? "fiction" : "fictions"}
+          </span>
         </div>
         <h1>
           Short fictions, <em>numbered.</em>
@@ -37,68 +39,84 @@ export default function ShortsPage() {
         </p>
       </section>
 
-      <article className="featured-short">
-        <Link
-          href={`/shorts/${featured.slug}`}
-          className="cover"
-          aria-label={`Read featured short: ${stripMarkers(featured.title)}`}
+      {all.length === 0 ? (
+        <p
+          className="lede"
+          style={{ color: "var(--ink-2)", fontStyle: "italic", marginTop: 32 }}
         >
-          <span className="no">№ {padNum(featured.number)} — short fiction</span>
-          <span className="corner">read me first ↘</span>
-          <span className="title">{renderInline(featured.title)}</span>
-        </Link>
-        <div className="text">
-          <div className="kicker">
-            <span>● featured · the newest one</span>
-          </div>
-          <p className="opener">
-            <span className="quote-mark">&ldquo;</span>
-            {renderInline(featured.dek)}
-            <span className="quote-mark">&rdquo;</span>
-          </p>
-          <div className="footer-row">
-            <span>
-              {formatMonthDay(featured.publishedAt)},{" "}
-              {new Date(featured.publishedAt).getFullYear()}
-            </span>
-            <span style={{ color: "var(--ink-4)" }}>·</span>
-            <span>~ {featured.wordCount} words</span>
-            <span style={{ color: "var(--ink-4)" }}>·</span>
-            <Link href={`/shorts/${featured.slug}`} className="read-cta">
-              read the short →
-            </Link>
-          </div>
-        </div>
-      </article>
+          no shorts yet. the first one is being written.{" "}
+          <Link href="/newsletter">subscribe</Link>
+          {" "}and it&apos;ll arrive when it&apos;s ready.
+        </p>
+      ) : (
+        <>
+          {featured && (
+            <article className="featured-short">
+              <Link
+                href={`/shorts/${featured.slug}`}
+                className="cover"
+                aria-label={`Read featured short: ${stripMarkers(featured.title)}`}
+              >
+                <span className="no">№ {padNum(featured.number)} — short fiction</span>
+                <span className="corner">read me first ↘</span>
+                <span className="title">{renderInline(featured.title)}</span>
+              </Link>
+              <div className="text">
+                <div className="kicker">
+                  <span>● featured · the newest one</span>
+                </div>
+                <p className="opener">
+                  <span className="quote-mark">&ldquo;</span>
+                  {renderInline(featured.dek)}
+                  <span className="quote-mark">&rdquo;</span>
+                </p>
+                <div className="footer-row">
+                  <span>
+                    {formatMonthDay(featured.publishedAt)},{" "}
+                    {new Date(featured.publishedAt).getFullYear()}
+                  </span>
+                  <span style={{ color: "var(--ink-4)" }}>·</span>
+                  <span>~ {featured.wordCount} words</span>
+                  <span style={{ color: "var(--ink-4)" }}>·</span>
+                  <Link href={`/shorts/${featured.slug}`} className="read-cta">
+                    read the short →
+                  </Link>
+                </div>
+              </div>
+            </article>
+          )}
 
-      <section className="covers">
-        {rest.map((s, i) => (
-          <article
-            key={s.slug}
-            className={`cover-card c-${COVER_COLORS[i % COVER_COLORS.length]}`}
-          >
-            <Link
-              href={`/shorts/${s.slug}`}
-              className="cover"
-              aria-label={`Read short: ${stripMarkers(s.title)}`}
-            >
-              <span className="no">№ {padNum(s.number)}</span>
-              <span className="corner-mark">↘</span>
-              <span className="title">{renderInline(s.title)}</span>
-            </Link>
-            <h3>
-              <Link href={`/shorts/${s.slug}`}>{renderInline(s.title)}</Link>
-            </h3>
-            <p className="dek">{renderInline(s.dek)}</p>
-            <div className="meta">
-              <span>
-                {formatMonthDay(s.publishedAt)}, {new Date(s.publishedAt).getFullYear()}
-              </span>
-              <span>~ {s.wordCount} words</span>
-            </div>
-          </article>
-        ))}
-      </section>
+          <section className="covers">
+            {rest.map((s, i) => (
+              <article
+                key={s.slug}
+                className={`cover-card c-${COVER_COLORS[i % COVER_COLORS.length]}`}
+              >
+                <Link
+                  href={`/shorts/${s.slug}`}
+                  className="cover"
+                  aria-label={`Read short: ${stripMarkers(s.title)}`}
+                >
+                  <span className="no">№ {padNum(s.number)}</span>
+                  <span className="corner-mark">↘</span>
+                  <span className="title">{renderInline(s.title)}</span>
+                </Link>
+                <h3>
+                  <Link href={`/shorts/${s.slug}`}>{renderInline(s.title)}</Link>
+                </h3>
+                <p className="dek">{renderInline(s.dek)}</p>
+                <div className="meta">
+                  <span>
+                    {formatMonthDay(s.publishedAt)},{" "}
+                    {new Date(s.publishedAt).getFullYear()}
+                  </span>
+                  <span>~ {s.wordCount} words</span>
+                </div>
+              </article>
+            ))}
+          </section>
+        </>
+      )}
 
       <div style={{ height: 48 }} />
     </SiteShell>

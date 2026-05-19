@@ -36,8 +36,16 @@ export default function Home() {
         <div className="kicker">
           <span className="pulse" aria-hidden />
           <span>
-            last essay — {formatLongDate(lastPub.publishedAt)}{" "}
-            <em>· {timeAgo(lastPub.publishedAt)}</em>
+            {lastPub ? (
+              <>
+                last essay — {formatLongDate(lastPub.publishedAt)}{" "}
+                <em>· {timeAgo(lastPub.publishedAt)}</em>
+              </>
+            ) : (
+              <>
+                opening soon — <em>· no essays yet</em>
+              </>
+            )}
           </span>
         </div>
         <h1>
@@ -54,7 +62,7 @@ export default function Home() {
           <span className="sep">·</span>
           <span>{allShorts.length} short fictions</span>
           <span className="sep">·</span>
-          <span>1,240 quiet readers</span>
+          <span>a small, quiet list</span>
         </div>
       </section>
 
@@ -71,67 +79,81 @@ export default function Home() {
           <h2>
             Recent <em>musings.</em>
           </h2>
-          <Link href="/musings" className="more">
-            all musings →
-          </Link>
+          {allMusings.length > 0 && (
+            <Link href="/musings" className="more">
+              all musings →
+            </Link>
+          )}
         </div>
 
-        <div className="filters">
-          {FILTERS.map((f) => (
-            <FilterPill key={f.label} active={f.active} count={f.count}>
-              {f.label}
-            </FilterPill>
-          ))}
-        </div>
-
-        <div className="grid">
-          {recent.map((m) => (
-            <article key={m.slug} className={`card t-${cardTintFromHero(m.heroTint)}`}>
-              <div className="art-slot">
-                <span className="ph">illustration · 5:4</span>
-              </div>
-              <div className="chips">
-                <Chip tint="lavender">musing</Chip>
-                {m.tags.map((t) => (
-                  <Chip key={t} tint={tagToTint(t)}>
-                    {t}
-                  </Chip>
-                ))}
-                {m.status === "draft" && <DraftPill />}
-              </div>
-              <h3>
-                <Link href={`/musings/${m.slug}`}>{renderInline(m.title)}</Link>
-              </h3>
-              <p className="dek">{renderInline(m.dek)}</p>
-              <div className="by">
-                <span>{formatShortDate(m.publishedAt)}</span>
-                <span className="sep">·</span>
-                <span>{m.readingTimeMinutes} min read</span>
-              </div>
-            </article>
-          ))}
-        </div>
-      </section>
-
-      <section className="featured">
-        <Link
-          href={`/shorts/${featured.slug}`}
-          className="art-slot"
-          aria-label={`Read featured short: ${plain(featured.title)}`}
-        >
-          <span className="ph">illustration · 4:5</span>
-        </Link>
-        <div className="text">
-          <div className="kicker">
-            <span>● featured short fiction</span>
+        {allMusings.length > 0 && (
+          <div className="filters">
+            {FILTERS.map((f) => (
+              <FilterPill key={f.label} active={f.active} count={f.count}>
+                {f.label}
+              </FilterPill>
+            ))}
           </div>
-          <h2>{renderInline(featured.title)}</h2>
-          <p className="dek">{renderInline(featured.dek)}</p>
-          <Link href={`/shorts/${featured.slug}`} className="read-cta">
-            read the short →
-          </Link>
-        </div>
+        )}
+
+        {recent.length > 0 ? (
+          <div className="grid">
+            {recent.map((m) => (
+              <article key={m.slug} className={`card t-${cardTintFromHero(m.heroTint)}`}>
+                <div className="art-slot">
+                  <span className="ph">illustration · 5:4</span>
+                </div>
+                <div className="chips">
+                  <Chip tint="lavender">musing</Chip>
+                  {m.tags.map((t) => (
+                    <Chip key={t} tint={tagToTint(t)}>
+                      {t}
+                    </Chip>
+                  ))}
+                  {m.status === "draft" && <DraftPill />}
+                </div>
+                <h3>
+                  <Link href={`/musings/${m.slug}`}>{renderInline(m.title)}</Link>
+                </h3>
+                <p className="dek">{renderInline(m.dek)}</p>
+                <div className="by">
+                  <span>{formatShortDate(m.publishedAt)}</span>
+                  <span className="sep">·</span>
+                  <span>{m.readingTimeMinutes} min read</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="lede" style={{ color: "var(--ink-2)", fontStyle: "italic" }}>
+            no essays yet. the first sunday letter is being written.{" "}
+            <Link href="/newsletter">subscribe</Link>
+            {" "}if you want it in your inbox when it lands.
+          </p>
+        )}
       </section>
+
+      {featured && (
+        <section className="featured">
+          <Link
+            href={`/shorts/${featured.slug}`}
+            className="art-slot"
+            aria-label={`Read featured short: ${plain(featured.title)}`}
+          >
+            <span className="ph">illustration · 4:5</span>
+          </Link>
+          <div className="text">
+            <div className="kicker">
+              <span>● featured short fiction</span>
+            </div>
+            <h2>{renderInline(featured.title)}</h2>
+            <p className="dek">{renderInline(featured.dek)}</p>
+            <Link href={`/shorts/${featured.slug}`} className="read-cta">
+              read the short →
+            </Link>
+          </div>
+        </section>
+      )}
 
       <section className="newsletter-band">
         <div>

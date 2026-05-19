@@ -3,7 +3,6 @@ import { HandInline } from "@/components/ui/hand-inline";
 import { SiteShell } from "@/components/layout/site-shell";
 import { SubscribeForm } from "@/components/subscribe-form";
 import { listSentCampaigns } from "@/lib/campaigns";
-import { pastLetters as samplePastLetters } from "@/lib/sample-data";
 import { findMusing, findShort } from "@/lib/posts";
 import { renderInline } from "@/lib/render-prose";
 import { padNum, stripMarkers } from "@/lib/format";
@@ -29,23 +28,12 @@ type PastEntry = {
 };
 
 /**
- * Past letters come from the real campaigns table once any have been sent.
- * Until then we fall back to the sample data so the page never reads empty
- * in dev.
+ * Past letters come from the real campaigns table. The UI shows a friendly
+ * empty state until the first one ships.
  */
 async function loadPastLetters(): Promise<PastEntry[]> {
   const sent = await listSentCampaigns();
-  if (sent.length === 0) {
-    return samplePastLetters.map((p) => ({
-      key: `sample-${p.number}`,
-      number: p.number,
-      date: p.date,
-      href: `/musings/${p.musingSlug}`,
-      title: p.summary.split(".")[0]!,
-      summary: p.summary,
-      stat: `${p.opens.toLocaleString()} opens`,
-    }));
-  }
+  if (sent.length === 0) return [];
   return sent.map((c) => {
     const post = c.postType === "musing" ? findMusing(c.postSlug) : findShort(c.postSlug);
     const path = c.postType === "musing" ? "musings" : "shorts";
@@ -293,6 +281,17 @@ export default function NewsletterPage() {
 
 async function PastList() {
   const items = await loadPastLetters();
+  if (items.length === 0) {
+    return (
+      <p
+        className="lede"
+        style={{ color: "var(--ink-2)", fontStyle: "italic", marginTop: 16 }}
+      >
+        no letters sent yet. the first one goes out on a sunday. yours, if you&apos;d like
+        it.
+      </p>
+    );
+  }
   return (
     <div className="past-list">
       {items.map((p) => (

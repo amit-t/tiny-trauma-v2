@@ -30,7 +30,7 @@ const FILTERS = [
 export default function MusingsPage() {
   const all = getPublishedMusings();
   const pick = all.find((m) => m.featured) ?? all[0];
-  const rest = all.filter((m) => m.slug !== pick.slug);
+  const rest = pick ? all.filter((m) => m.slug !== pick.slug) : [];
 
   const buckets = new Map<number, typeof rest>();
   for (const m of rest) {
@@ -44,7 +44,9 @@ export default function MusingsPage() {
     <SiteShell activeHref="/musings">
       <section className="page-intro">
         <div className="kicker">
-          <span>musings · {all.length} essays · since jan 2024</span>
+          <span>
+            musings · {all.length} {all.length === 1 ? "essay" : "essays"}
+          </span>
         </div>
         <h1>
           Notes from <em>noticing.</em>
@@ -56,91 +58,82 @@ export default function MusingsPage() {
         </p>
       </section>
 
-      <div className="filters">
-        {FILTERS.map((f) => (
-          <FilterPill key={f.label} active={f.active} count={f.count}>
-            {f.label}
-          </FilterPill>
-        ))}
-      </div>
-
-      <div className="toolbar">
-        <div className="count">
-          <strong style={{ color: "var(--ink)" }}>{all.length}</strong> essays · filtered
-          by <em>all</em>
-        </div>
-        <div className="sort">
-          sort by
-          <select defaultValue="newest" aria-label="Sort essays">
-            <option value="newest">newest first</option>
-            <option value="oldest">oldest first</option>
-            <option value="shortest">shortest first</option>
-            <option value="longest">longest first</option>
-          </select>
-        </div>
-      </div>
-
-      <article className="pick">
-        <div>
-          <div className="kicker">
-            <span>● editor&apos;s pick · the one I&apos;d start with</span>
+      {all.length === 0 ? (
+        <p
+          className="lede"
+          style={{ color: "var(--ink-2)", fontStyle: "italic", marginTop: 32 }}
+        >
+          no essays yet. the first one is being written.{" "}
+          <Link href="/newsletter">subscribe</Link>
+          {" "}and it&apos;ll find you on a sunday.
+        </p>
+      ) : (
+        <>
+          <div className="filters">
+            {FILTERS.map((f) => (
+              <FilterPill key={f.label} active={f.active} count={f.count}>
+                {f.label}
+              </FilterPill>
+            ))}
           </div>
-          <h2>
-            <Link href={`/musings/${pick.slug}`}>{renderInline(pick.title)}</Link>
-          </h2>
-          <p className="dek">{renderInline(pick.dek)}</p>
-          <div className="by">
-            <span>
-              {formatMonthDay(pick.publishedAt)},{" "}
-              {new Date(pick.publishedAt).getFullYear()}
-            </span>
-            <span className="sep">·</span>
-            <span>{pick.readingTimeMinutes} min read</span>
-            <span className="chips">
-              <Chip tint="lavender">musing</Chip>
-              {pick.tags.map((t) => (
-                <Chip key={t} tint={tagToTint(t)}>
-                  {t}
-                </Chip>
-              ))}
-            </span>
+
+          <div className="toolbar">
+            <div className="count">
+              <strong style={{ color: "var(--ink)" }}>{all.length}</strong> essays ·
+              filtered by <em>all</em>
+            </div>
+            <div className="sort">
+              sort by
+              <select defaultValue="newest" aria-label="Sort essays">
+                <option value="newest">newest first</option>
+                <option value="oldest">oldest first</option>
+                <option value="shortest">shortest first</option>
+                <option value="longest">longest first</option>
+              </select>
+            </div>
           </div>
-        </div>
-        <div className="art-slot" style={{ background: "var(--art-s)" }}>
-          <span className="ph">illustration · 4:3</span>
-        </div>
-      </article>
 
-      {years.map((y, i) => (
-        <div key={y}>
-          <YearSep label={String(y)} tail={i === 0 ? "so far" : "(a selection)"} />
-          <River items={buckets.get(y)!} />
-        </div>
-      ))}
+          {pick && (
+            <article className="pick">
+              <div>
+                <div className="kicker">
+                  <span>● editor&apos;s pick · the one I&apos;d start with</span>
+                </div>
+                <h2>
+                  <Link href={`/musings/${pick.slug}`}>{renderInline(pick.title)}</Link>
+                </h2>
+                <p className="dek">{renderInline(pick.dek)}</p>
+                <div className="by">
+                  <span>
+                    {formatMonthDay(pick.publishedAt)},{" "}
+                    {new Date(pick.publishedAt).getFullYear()}
+                  </span>
+                  <span className="sep">·</span>
+                  <span>{pick.readingTimeMinutes} min read</span>
+                  <span className="chips">
+                    <Chip tint="lavender">musing</Chip>
+                    {pick.tags.map((t) => (
+                      <Chip key={t} tint={tagToTint(t)}>
+                        {t}
+                      </Chip>
+                    ))}
+                  </span>
+                </div>
+              </div>
+              <div className="art-slot" style={{ background: "var(--art-s)" }}>
+                <span className="ph">illustration · 4:3</span>
+              </div>
+            </article>
+          )}
 
-      <nav className="pager" aria-label="Pagination">
-        <div>page 1 of 3 · {all.length} essays</div>
-        <div className="pages">
-          <span style={{ color: "var(--ink-4)" }}>←</span>
-          <a className="active">1</a>
-          <a>2</a>
-          <a>3</a>
-          <a>→</a>
-        </div>
-        <div>
-          jump to{" "}
-          <Link
-            href="/shorts"
-            style={{
-              color: "var(--ink-2)",
-              borderBottom: "1px solid var(--border)",
-              paddingBottom: 2,
-            }}
-          >
-            shorts →
-          </Link>
-        </div>
-      </nav>
+          {years.map((y, i) => (
+            <div key={y}>
+              <YearSep label={String(y)} tail={i === 0 ? "so far" : "(a selection)"} />
+              <River items={buckets.get(y)!} />
+            </div>
+          ))}
+        </>
+      )}
     </SiteShell>
   );
 }
