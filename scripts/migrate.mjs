@@ -44,8 +44,11 @@ try {
       current_setting('server_version_num')           AS pg_version_num,
       (SELECT rolname
          FROM pg_database d
-         JOIN pg_authid a ON a.oid = d.datdba
+         JOIN pg_roles a ON a.oid = d.datdba
         WHERE d.datname = current_database())         AS db_owner,
+      (SELECT nspowner::regrole::text
+         FROM pg_namespace
+        WHERE nspname = 'public')                     AS public_owner,
       has_database_privilege(current_user,
                              current_database(),
                              'CREATE')                AS can_create_in_db,
