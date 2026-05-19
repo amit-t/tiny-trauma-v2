@@ -1,0 +1,118 @@
+# DigitalOcean App Platform spec for Tiny Trauma.
+#
+# Bootstrap (first deploy):
+#   doctl apps create --spec .do/app.yaml
+#
+# Re-sync after editing this file (or after a manual dashboard tweak):
+#   doctl apps update <APP_ID> --spec .do/app.yaml
+#
+# Set the SECRET-typed env values once via the dashboard or:
+#   doctl apps update <APP_ID> --spec .do/app.yaml \
+#     --update-sources  # then edit each SECRET in the UI
+#
+# Code pushes to `main` auto-deploy via the `github.deploy_on_push` flag.
+
+name: tiny-trauma
+region: nyc
+
+domains:
+  - domain: tinytrauma.com
+    type: PRIMARY
+    zone: tinytrauma.com
+
+services:
+  - name: web
+    github:
+      repo: amit-t/tiny-trauma-v2
+      branch: main
+      deploy_on_push: true
+    source_dir: /
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    http_port: 3000
+    build_command: pnpm install --frozen-lockfile && pnpm build
+    run_command: pnpm start
+    health_check:
+      http_path: /
+      initial_delay_seconds: 30
+      period_seconds: 30
+      timeout_seconds: 5
+      success_threshold: 1
+      failure_threshold: 6
+    envs:
+      # Build-time only: t3-env's escape hatch so `next build` doesn't
+      # require real secrets while collecting page data. Runtime calls
+      # still validate via lib/env.ts at first access.
+      - key: SKIP_ENV_VALIDATION
+        value: "1"
+        scope: BUILD_TIME
+
+      - key: NODE_ENV
+        value: production
+        scope: RUN_AND_BUILD_TIME
+
+      # Managed Postgres is wired in via the `databases:` block below.
+      - key: DATABASE_URL
+        value: ${db.DATABASE_URL}
+        scope: RUN_TIME
+
+      - key: BETTER_AUTH_URL
+        value: https://tinytrauma.com
+        scope: RUN_TIME
+      - key: BETTER_AUTH_SECRET
+        type: SECRET
+        scope: RUN_TIME
+
+      - key: RESEND_API_KEY
+        type: SECRET
+        scope: RUN_TIME
+      - key: RESEND_FROM
+        value: hi@tinytrauma.com
+        scope: RUN_TIME
+      - key: RESEND_REPLY_TO
+        value: hi@tinytrauma.com
+        scope: RUN_TIME
+      - key: RESEND_WEBHOOK_SECRET
+        type: SECRET
+        scope: RUN_TIME
+
+      - key: CRON_SECRET
+        type: SECRET
+        scope: RUN_TIME
+
+      - key: OWNER_EMAIL
+        value: tiwari.m.amit@gmail.com
+        scope: RUN_TIME
+
+      - key: PLAUSIBLE_DOMAIN
+        value: tinytrauma.com
+        scope: RUN_TIME
+
+jobs:
+  # Runs `drizzle-kit migrate` against the managed DB before each new
+  # release goes live. If migration fails, the deploy is aborted.
+  - name: migrate
+    kind: PRE_DEPLOY
+    github:
+      repo: amit-t/tiny-trauma-v2
+      branch: main
+    source_dir: /
+    environment_slug: node-js
+    instance_count: 1
+    instance_size_slug: basic-xxs
+    build_command: pnpm install --frozen-lockfile
+    run_command: pnpm exec drizzle-kit migrate
+    envs:
+      - key: DATABASE_URL
+        value: ${db.DATABASE_URL}
+        scope: RUN_TIME
+
+databases:
+  - name: db
+    engine: PG
+    version: "16"
+    # Dev tier: 1 vCPU / 1GB / 10GB storage, ~$7/mo. Bump to `production: true`
+    # and a larger size when scaling up.
+    production: false
+    cluster_name: tiny-trauma-db
