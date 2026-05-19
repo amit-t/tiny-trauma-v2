@@ -1,0 +1,42 @@
+#!/usr/bin/env zsh
+# tt-cross-post — turn a published MDX into Twitter / LinkedIn / Instagram drafts.
+#
+# Usage: tt-cross-post <slug> [--engine claude|codex|gemini|devin] [--dry-run] [--help]
+#   slug is the post path under content, e.g. "musings/why-i-cry-at-ads"
+
+set -u
+script_path=${0:A}
+source "${script_path:h}/_tt-engine.zsh"
+
+usage() {
+  cat <<'EOF'
+tt-cross-post — generate Twitter / LinkedIn / Instagram from a published MDX.
+
+Usage:
+  tt-cross-post <slug> [--engine ENGINE] [--dry-run]
+  echo "tone note" | tt-cross-post musings/why-i-cry-at-ads
+
+Arguments:
+  <slug>            Post path, e.g. "musings/why-i-cry-at-ads" or "shorts/the-cab".
+
+Options:
+  --engine ENGINE   claude | codex | gemini | devin (default: $TT_ENGINE or claude)
+  --dry-run         Print resolved prompt + engine command, do not execute.
+  -h, --help        Show this help.
+
+Stdin (when piped) is appended to the prompt as Extra context.
+EOF
+}
+
+tt_parse_common_flags "$@" || exit $?
+if (( TT_HELP_REQUESTED )); then usage; exit 0; fi
+
+if (( ${#TT_REST[@]} != 1 )); then
+  print -ru2 -- "error: tt-cross-post requires exactly one <slug> arg"
+  usage >&2
+  exit 2
+fi
+
+slug="${TT_REST[1]}"
+prompt=$(tt_build_prompt "Run the .agent/skills/tiny-trauma-content skill with mode=cross-post and target=${slug}.")
+tt_run_engine "$prompt"

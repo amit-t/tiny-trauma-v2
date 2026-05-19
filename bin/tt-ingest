@@ -1,0 +1,59 @@
+#!/usr/bin/env zsh
+# tt-ingest — refresh the Tiny Trauma Instagram inspirations catalog.
+#
+# Usage: tt-ingest [ingest|rebuild-registry|dry-run]
+#                  [--engine claude|codex|gemini|devin] [--dry-run] [--help]
+#
+# The positional mode controls the skill behavior; --dry-run is the CLI's own
+# "show me the prompt without executing" flag. They are different.
+
+set -u
+script_path=${0:A}
+source "${script_path:h}/_tt-engine.zsh"
+
+usage() {
+  cat <<'EOF'
+tt-ingest — refresh inspirations/instagram/posts/ catalog.
+
+Usage:
+  tt-ingest [MODE] [--engine ENGINE] [--dry-run]
+
+Modes (positional, default = ingest):
+  ingest             Fetch new posts and append.
+  rebuild-registry   Rebuild _url_registry.json from existing posts.
+  dry-run            (skill-level) List which URLs WOULD be fetched.
+
+Options:
+  --engine ENGINE    claude | codex | gemini | devin (default: $TT_ENGINE or claude)
+  --dry-run          (CLI-level) Print resolved prompt + engine command only.
+  -h, --help         Show this help.
+
+Note: the positional `dry-run` MODE is a skill behavior, distinct from the
+CLI's `--dry-run` flag.
+EOF
+}
+
+tt_parse_common_flags "$@" || exit $?
+if (( TT_HELP_REQUESTED )); then usage; exit 0; fi
+
+local mode="ingest"
+case ${#TT_REST[@]} in
+  0) ;;
+  1) mode="${TT_REST[1]}" ;;
+  *)
+    print -ru2 -- "error: tt-ingest accepts at most one positional MODE arg"
+    usage >&2
+    exit 2
+    ;;
+esac
+
+case "$mode" in
+  ingest|rebuild-registry|dry-run) ;;
+  *)
+    print -ru2 -- "error: invalid mode '$mode' (valid: ingest | rebuild-registry | dry-run)"
+    exit 2
+    ;;
+esac
+
+prompt=$(tt_build_prompt "Run the .agent/skills/tt-instagram-ingest skill with mode=${mode}.")
+tt_run_engine "$prompt"

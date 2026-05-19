@@ -1,0 +1,39 @@
+#!/usr/bin/env zsh
+# tt-essay — start a Tiny Trauma essay session via any supported engine.
+#
+# Usage: tt-essay [--engine claude|codex|gemini|devin] [--dry-run] [--help]
+#        echo "seed paragraph" | tt-essay
+#
+# Default engine: $TT_ENGINE or claude.
+
+set -u
+script_path=${0:A}
+source "${script_path:h}/_tt-engine.zsh"
+
+usage() {
+  cat <<'EOF'
+tt-essay — Tiny Trauma essay flow (writes a publishable musing .mdx).
+
+Usage:
+  tt-essay [--engine ENGINE] [--dry-run]
+  echo "seed" | tt-essay
+
+Options:
+  --engine ENGINE   claude | codex | gemini | devin (default: $TT_ENGINE or claude)
+  --dry-run         Print resolved prompt + engine command, do not execute.
+  -h, --help        Show this help.
+
+Stdin (when piped) is appended to the prompt as Extra context.
+EOF
+}
+
+tt_parse_common_flags "$@" || exit $?
+if (( TT_HELP_REQUESTED )); then usage; exit 0; fi
+if (( ${#TT_REST[@]} > 0 )); then
+  print -ru2 -- "error: unexpected args: ${TT_REST[*]}"
+  usage >&2
+  exit 2
+fi
+
+prompt=$(tt_build_prompt "Run the .agent/skills/tiny-trauma-content skill with mode=essay.")
+tt_run_engine "$prompt"
