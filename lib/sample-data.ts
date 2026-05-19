@@ -1,4 +1,4 @@
-import type { BasePost, CurrentlyBlock, PastLetter } from "./types";
+import type { BasePost, PastLetter } from "./types";
 
 const T = {
   musing: { label: "musing", tint: "lavender" } as const,
@@ -555,14 +555,6 @@ export const pastLetters: PastLetter[] = [
       "There is a version of me in meetings who knows what he is doing. I do not know him. I keep him alive for the household.",
   },
 ];
-
-/* ---------------- currently block ---------------- */
-
-export const currentlyBlock: CurrentlyBlock = {
-  reading: "*Cold Enough for Snow*, Jessica Au — slowly, on the metro.",
-  writing: "something about the chai stall man whose name I still don't know.",
-  noticing: "the dog at the corner has started recognising the auto, not me.",
-};
 
 /* ---------------- helpers ---------------- */
 

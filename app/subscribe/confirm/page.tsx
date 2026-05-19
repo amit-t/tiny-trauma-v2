@@ -67,6 +67,7 @@ export default async function ConfirmPage({
 
 function Result({ kind }: { kind: "ok" | "missing" | "unknown" }) {
   const starters = getPublishedMusings().slice(0, 3);
+  const hasStarters = starters.length > 0;
   return (
     <SiteShell>
       <section className="page-intro">
@@ -79,10 +80,15 @@ function Result({ kind }: { kind: "ok" | "missing" | "unknown" }) {
               you&apos;re <em>on the list.</em>
             </h1>
             <p className="lede">
-              the next sunday letter will find you.{" "}
-              <span className="hand-inline">
-                in the meantime, three essays to start with:
-              </span>
+              the next sunday letter will find you.
+              {hasStarters && (
+                <>
+                  {" "}
+                  <span className="hand-inline">
+                    in the meantime, three essays to start with:
+                  </span>
+                </>
+              )}
             </p>
           </>
         ) : (
@@ -104,7 +110,7 @@ function Result({ kind }: { kind: "ok" | "missing" | "unknown" }) {
         )}
       </section>
 
-      {kind === "ok" && (
+      {kind === "ok" && hasStarters && (
         <ul
           style={{
             display: "grid",

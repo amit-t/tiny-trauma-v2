@@ -28,9 +28,13 @@ section can stay as a record.
 
 ## Phase 2 · Public site
 
-- [ ] Click through `/`, `/musings`, `/musings/why-i-cry-at-ads`,
-      `/shorts`, `/shorts/the-3-am-cart`, `/about`, `/newsletter`.
-      No 404s, no console errors.
+- [ ] Click through `/`, `/musings`, `/shorts`, `/about`, `/newsletter`.
+      No 404s, no console errors. (`/musings/<slug>` and `/shorts/<slug>`
+      detail routes 404 cleanly until you publish a post — that's expected
+      on a fresh deploy.) When the site is empty, the home / musings /
+      shorts / newsletter pages should show their italicised "no essays
+      yet / no shorts yet / no letters sent yet" placeholders rather than
+      crashing.
 - [ ] Side-by-side with `handoff/design/*.html` — confirm the spacing,
       hero, card grid, pullquote, drop cap, cover grid, FAQ all match.
 - [ ] Lighthouse perf on `/` via `pnpm build && pnpm start` → expect ≥ 95.

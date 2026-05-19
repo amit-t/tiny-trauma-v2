@@ -61,18 +61,25 @@ export async function sendWelcomeEmail(
   props: WelcomeEmailProps,
 ): Promise<void> {
   const html = await render(WelcomeEmail(props));
+  const hasStarters = props.starterEssays.length > 0;
   const lines = [
     "you're on the list. the next Sunday letter will find you.",
     "",
-    "in the meantime, three essays to start with:",
-    ...props.starterEssays.slice(0, 3).map((e) => ` - ${e.title}: ${e.url}`),
-    "",
+    ...(hasStarters
+      ? [
+          "in the meantime, a few essays to start with:",
+          ...props.starterEssays.slice(0, 3).map((e) => ` - ${e.title}: ${e.url}`),
+          "",
+        ]
+      : []),
     "you can always reply. I read every email.",
     "— Amit",
   ];
   await send({
     to,
-    subject: "you're in. ↳ three essays to start with",
+    subject: hasStarters
+      ? "you're in. ↳ a few essays to start with"
+      : "you're in. the first letter will find you.",
     html,
     text: lines.join("\n"),
   });

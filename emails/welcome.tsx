@@ -9,7 +9,11 @@ export type WelcomeEmailProps = {
 export function WelcomeEmail({ starterEssays, unsubscribeUrl }: WelcomeEmailProps) {
   return (
     <EmailLayout
-      preview="you're in. ↳ three essays to start with"
+      preview={
+        starterEssays.length > 0
+          ? "you're in. ↳ a few essays to start with"
+          : "you're in. the first letter will find you."
+      }
       unsubscribeUrl={unsubscribeUrl}
     >
       <Section style={{ marginTop: 24 }}>
@@ -25,45 +29,49 @@ export function WelcomeEmail({ starterEssays, unsubscribeUrl }: WelcomeEmailProp
         >
           you&apos;re on the list. the next Sunday letter will find you.
         </Text>
-        <Text
-          style={{
-            fontFamily: EMAIL_MONO,
-            fontSize: 14,
-            lineHeight: 1.7,
-            color: EMAIL_COLORS.ink2,
-            marginTop: 20,
-          }}
-        >
-          in the meantime, three essays to start with — these are the ones I&apos;d press
-          into your hand if we were standing next to a kettle:
-        </Text>
-      </Section>
-
-      <Section style={{ marginTop: 20 }}>
-        {starterEssays.slice(0, 3).map((e) => (
+        {starterEssays.length > 0 && (
           <Text
-            key={e.url}
             style={{
-              fontFamily: EMAIL_SERIF,
-              fontSize: 18,
-              lineHeight: 1.35,
-              color: EMAIL_COLORS.ink,
-              margin: "8px 0",
+              fontFamily: EMAIL_MONO,
+              fontSize: 14,
+              lineHeight: 1.7,
+              color: EMAIL_COLORS.ink2,
+              marginTop: 20,
             }}
           >
-            ↳{" "}
-            <Link
-              href={e.url}
+            in the meantime, a few essays to start with — these are the ones I&apos;d
+            press into your hand if we were standing next to a kettle:
+          </Text>
+        )}
+      </Section>
+
+      {starterEssays.length > 0 && (
+        <Section style={{ marginTop: 20 }}>
+          {starterEssays.slice(0, 3).map((e) => (
+            <Text
+              key={e.url}
               style={{
+                fontFamily: EMAIL_SERIF,
+                fontSize: 18,
+                lineHeight: 1.35,
                 color: EMAIL_COLORS.ink,
-                borderBottom: `1px solid ${EMAIL_COLORS.border}`,
+                margin: "8px 0",
               }}
             >
-              {e.title}
-            </Link>
-          </Text>
-        ))}
-      </Section>
+              ↳{" "}
+              <Link
+                href={e.url}
+                style={{
+                  color: EMAIL_COLORS.ink,
+                  borderBottom: `1px solid ${EMAIL_COLORS.border}`,
+                }}
+              >
+                {e.title}
+              </Link>
+            </Text>
+          ))}
+        </Section>
+      )}
 
       <Text
         style={{
