@@ -15,6 +15,14 @@
 name: tiny-trauma
 region: blr
 
+# App-level env vars are inherited by every component (web service +
+# migrate job), so we only define DATABASE_URL once. Per-component
+# overrides still work if needed later.
+envs:
+  - key: DATABASE_URL
+    type: SECRET
+    scope: RUN_TIME
+
 domains:
   - domain: tinytrauma.com
     type: PRIMARY
@@ -52,10 +60,13 @@ services:
         value: production
         scope: RUN_AND_BUILD_TIME
 
-      # Managed Postgres is wired in via the `databases:` block below.
-      - key: DATABASE_URL
-        value: ${db.DATABASE_URL}
-        scope: RUN_TIME
+      # DATABASE_URL is defined at the app level (see top of file) so the
+      # web service and the migrate job share one SECRET. It points at
+      # the standalone `tt-pg` cluster — the `databases:` binding block
+      # is removed because DO Apps couldn't discover the cluster across
+      # projects (`dbaas instance not found`), and reassigning it was
+      # rejected by the DBaaS API (`service_down`). Pasting the
+      # connection string directly sidesteps the whole binding system.
 
       - key: BETTER_AUTH_URL
         value: https://tinytrauma.com
@@ -106,17 +117,5 @@ jobs:
     # swallows postgres-js connection errors. Our own runner prints the
     # error stack on failure so deploy-log post-mortems are possible.
     run_command: node scripts/migrate.mjs
-    envs:
-      - key: DATABASE_URL
-        value: ${db.DATABASE_URL}
-        scope: RUN_TIME
-
-databases:
-  - name: db
-    engine: PG
-    version: "16"
-    # Dev tier: 1 vCPU / 1GB / 10GB storage, ~$7/mo. Cluster name, db
-    # name, and db user must equal the component name on dev tier — DO
-    # rejects custom values. They become customisable once you flip
-    # `production: true` and pick a larger size.
-    production: false
+    # DATABASE_URL is inherited from the app-level envs block at the
+    # top of this file.

@@ -35,47 +35,6 @@ const MIGRATIONS_DIR = "db/migrations";
 const STATEMENT_BREAKPOINT = "--> statement-breakpoint";
 
 try {
-  // Diagnostic: who are we, what can we do? Dump this before any DDL so
-  // if a privilege error fires we can read it off the deploy log.
-  const [identity] = await sql`
-    SELECT
-      current_user                                    AS user,
-      current_database()                              AS db,
-      current_setting('server_version_num')           AS pg_version_num,
-      (SELECT rolname
-         FROM pg_database d
-         JOIN pg_roles a ON a.oid = d.datdba
-        WHERE d.datname = current_database())         AS db_owner,
-      (SELECT nspowner::regrole::text
-         FROM pg_namespace
-        WHERE nspname = 'public')                     AS public_owner,
-      has_database_privilege(current_user,
-                             current_database(),
-                             'CREATE')                AS can_create_in_db,
-      has_schema_privilege(current_user, 'public',
-                           'CREATE')                  AS can_create_in_public
-  `;
-  console.log(`[migrate] identity ${JSON.stringify(identity)}`);
-
-  const [{ search_path }] = await sql`SELECT current_setting('search_path') AS search_path`;
-  console.log(`[migrate] search_path=${search_path}`);
-
-  const schemas = await sql`
-    SELECT
-      nspname,
-      pg_get_userbyid(nspowner)                           AS owner,
-      has_schema_privilege(current_user, nspname, 'CREATE') AS can_create,
-      has_schema_privilege(current_user, nspname, 'USAGE')  AS can_use
-    FROM pg_namespace
-    WHERE nspname NOT LIKE 'pg_%' AND nspname <> 'information_schema'
-    ORDER BY nspname
-  `;
-  for (const s of schemas) {
-    console.log(
-      `[migrate] schema ${s.nspname} owner=${s.owner} create=${s.can_create} use=${s.can_use}`,
-    );
-  }
-
   await sql`
     CREATE TABLE IF NOT EXISTS public.__drizzle_migrations (
       id SERIAL PRIMARY KEY,
