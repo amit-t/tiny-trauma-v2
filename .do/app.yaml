@@ -1,16 +1,26 @@
 # DigitalOcean App Platform spec for Tiny Trauma.
 #
+# Editing this file:
+#   1. Change anything you want here (instance size, env vars, health
+#      check, etc.) and push to `main`.
+#   2. `.github/workflows/do-spec-sync.yml` fetches the live spec,
+#      splices the existing `EV[1:...]` SECRET ciphertexts into the
+#      repo spec via `scripts/do-spec-merge.mjs`, then applies the
+#      result with `doctl apps update`. Code pushes also trigger an
+#      auto-deploy via `github.deploy_on_push`.
+#
 # Bootstrap (first deploy):
 #   doctl apps create --spec .do/app.yaml
 #
-# Re-sync after editing this file (or after a manual dashboard tweak):
-#   doctl apps update <APP_ID> --spec .do/app.yaml
+# Manual re-sync from your laptop (skips the GH Action — only do this
+# if the action is broken or the repo is dirty):
+#   doctl apps spec get <APP_ID> > /tmp/live.yaml
+#   node scripts/do-spec-merge.mjs .do/app.yaml /tmp/live.yaml > /tmp/merged.yaml
+#   doctl apps update <APP_ID> --spec /tmp/merged.yaml
 #
-# Set the SECRET-typed env values once via the dashboard or:
-#   doctl apps update <APP_ID> --spec .do/app.yaml \
-#     --update-sources  # then edit each SECRET in the UI
-#
-# Code pushes to `main` auto-deploy via the `github.deploy_on_push` flag.
+# Required GitHub repo secrets (already set):
+#   DIGITALOCEAN_ACCESS_TOKEN  - DO API token, scope `apps:write`
+#   DO_APP_ID                  - 00052d67-e71e-46ae-ac96-faedbdffd3fd
 
 name: tiny-trauma
 region: blr
@@ -43,11 +53,16 @@ services:
     run_command: pnpm start
     health_check:
       http_path: /
+      # Cold-start the Next standalone server cold-loads its bundle,
+      # opens the postgres pool, and pre-renders the home page on
+      # first request. A 30s initial delay + 9 × 30s grace is enough
+      # for the slowest cold path we've measured (~3.5 min) without
+      # waiting forever on a truly stuck deploy.
       initial_delay_seconds: 30
       period_seconds: 30
       timeout_seconds: 5
       success_threshold: 1
-      failure_threshold: 6
+      failure_threshold: 9
     envs:
       # Build-time only: t3-env's escape hatch so `next build` doesn't
       # require real secrets while collecting page data. Runtime calls
