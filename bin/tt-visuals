@@ -182,6 +182,112 @@ if (( dry_run )); then
   exit 0
 fi
 
-# M2 wires the render path.
-print -ru2 -- "tt-visuals: rendering is not implemented in this build (M2). Use --dry-run."
-exit 2
+# ---- source M2 libraries ---------------------------------------------------
+source "$SCRIPT_DIR/lib/tt-visuals/render.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/pick-ui.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/install-winner.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/rewrite-mdx.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/social-crops.zsh"
+
+# ---- choose engines ---------------------------------------------------------
+typeset -a engines
+if [[ "$engine" == "all" ]]; then
+  # M2: 'all' === just gemini (only implemented branch). M3 expands.
+  engines=(gemini)
+else
+  engines=("$engine")
+fi
+
+# Probe availability — skip missing.
+typeset -a live_engines
+live_engines=()
+for e in "${engines[@]}"; do
+  if command -v "$e" >/dev/null 2>&1; then
+    live_engines+=("$e")
+  else
+    print -ru2 -- "tt-visuals: skipping $e (CLI not on PATH)"
+  fi
+done
+
+if (( ${#live_engines[@]} == 0 )); then
+  print -ru2 -- "error: no engines available"
+  exit 3
+fi
+
+# ---- render across engines --------------------------------------------------
+typeset cand_root="/tmp/tt-visuals-${slug}-$$"
+mkdir -p "$cand_root"
+typeset -i any_render=0
+for e in "${live_engines[@]}"; do
+  if tt_render_slots "$e" "$prompts_json_path" "$cand_root"; then
+    (( any_render++ ))
+  fi
+done
+(( any_render > 0 )) || { print -ru2 -- "error: every engine failed"; exit 5; }
+
+# ---- pick per slot ----------------------------------------------------------
+typeset -A picks
+typeset slot_dir slot_name pick
+for slot_dir in "$cand_root"/*(/); do
+  slot_name="${slot_dir:t}"
+  case "$slot_name" in
+    hero) ;;          # ok
+    inline-*) ;;      # ok
+    *) continue ;;
+  esac
+  pick=$(tt_pick_for_slot "$slot_name" "$slot_dir")
+  case "$pick" in
+    __quit__) print -ru2 -- "tt-visuals: user quit"; exit 6 ;;
+    __skip__|__retry__)
+      # __retry__ ignored in M2 (treated like skip); M3 wires re-render
+      ;;
+    *)
+      picks[$slot_name]="$pick"
+      tt_install_winner "$slot_name" "$pick" "$slot_dir" "$asset_dir" "$force" || exit 5
+      ;;
+  esac
+done
+
+# ---- build installed.json for the rewriter ---------------------------------
+typeset installed_json=$(mktemp -t tt-installed-XXXXXX.json)
+typeset picks_json_file=$(mktemp -t tt-picks-XXXXXX.json)
+# Emit picks as a JSON object via node.
+{
+  print -n -- "{"
+  typeset -i first=1
+  for k in "${(@k)picks}"; do
+    if (( first )); then first=0; else print -n -- ","; fi
+    print -n -- "\"${k}\":\"${picks[$k]}\""
+  done
+  print -n -- "}"
+} > "$picks_json_file"
+
+node "$SCRIPT_DIR/lib/tt-visuals/build-installed.mjs" \
+  "$type" "$slug" "$picks_json_file" "$installed_json"
+rm -f "$picks_json_file"
+
+# ---- rewrite mdx atomically -------------------------------------------------
+if (( ! no_install )) && (( ${#picks[@]} > 0 )); then
+  tt_rewrite_mdx "$mdx_path" "$installed_json" "$REPO_ROOT" || exit 5
+fi
+
+# ---- social crops -----------------------------------------------------------
+if [[ -f "$asset_dir/hero.png" ]] && [[ ",${slots_csv}," == *",social,"* ]]; then
+  tt_make_social_crops "$asset_dir/hero.png" "$asset_dir" \
+    || print -ru2 -- "tt-visuals: social-crops failed (non-fatal)"
+fi
+
+# ---- prune losers unless --keep-candidates ---------------------------------
+(( keep_cand )) || rm -rf "$asset_dir/.candidates"
+
+# ---- commit hint ------------------------------------------------------------
+rm -rf "$cand_root"
+rm -f "$installed_json"
+print -r -- ""
+print -r -- "✓ visuals installed for $target"
+print -r -- ""
+print -r -- "Commit hint:"
+print -r -- "  git add content/${target}.mdx public/img/${type}/${slug}/"
+print -r -- "  git commit -m 'visuals: ${slug}'"
+print -r -- "  git push"
+exit 0
