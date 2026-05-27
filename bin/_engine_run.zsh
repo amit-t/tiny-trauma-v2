@@ -42,11 +42,36 @@ case "$engine" in
       --aspect "$aspect"
     rc=$?
     rm -f "$pf"
+    # Defensive: some CLIs return exit 0 even when no image was written
+    # (rate-limit edge cases, silent content-policy filters). Treat a
+    # missing/empty output as a render failure so the caller doesn't pick
+    # a phantom candidate.
+    if (( rc == 0 )) && [[ ! -s "$out" ]]; then
+      print -ru2 -- "_engine_run: gemini exited 0 but produced no output at $out"
+      rc=1
+    fi
     exit $rc
     ;;
-  codex|devin)
-    print -ru2 -- "_engine_run: $engine not implemented in this build (M3)"
-    exit 2
+  codex)
+    # M3 stub. Same defensive output-exists check applied here so that when
+    # the branch is implemented it inherits the protection by default.
+    print -ru2 -- "_engine_run: codex not implemented in this build (M3)"
+    rc=2
+    if (( rc == 0 )) && [[ ! -s "$out" ]]; then
+      print -ru2 -- "_engine_run: codex exited 0 but produced no output at $out"
+      rc=1
+    fi
+    exit $rc
+    ;;
+  devin)
+    # M3 stub. See note on codex branch above.
+    print -ru2 -- "_engine_run: devin not implemented in this build (M3)"
+    rc=2
+    if (( rc == 0 )) && [[ ! -s "$out" ]]; then
+      print -ru2 -- "_engine_run: devin exited 0 but produced no output at $out"
+      rc=1
+    fi
+    exit $rc
     ;;
   claude)
     print -ru2 -- "_engine_run: claude has no image gen"

@@ -263,7 +263,8 @@ typeset picks_json_file=$(mktemp -t tt-picks-XXXXXX.json)
 } > "$picks_json_file"
 
 node "$SCRIPT_DIR/lib/tt-visuals/build-installed.mjs" \
-  "$type" "$slug" "$picks_json_file" "$installed_json"
+  "$type" "$slug" "$picks_json_file" "$installed_json" \
+  || { print -ru2 -- "tt-visuals: build-installed failed"; exit 5; }
 rm -f "$picks_json_file"
 
 # ---- rewrite mdx atomically -------------------------------------------------
