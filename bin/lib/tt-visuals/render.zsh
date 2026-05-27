@@ -72,3 +72,25 @@ tt_render_slots() {
 
   return 0
 }
+
+# Usage: tt_render_slots_multi "<engine1> <engine2> ..." <prompts-json> <cand-dir>
+#
+# Runs tt_render_slots for each engine in parallel under
+# tt_parallel_run (caller must have sourced parallel.zsh). Returns 0 if every
+# engine returned 0; otherwise the first non-zero rc seen.
+#
+# Both <prompts-json> and <cand-dir> are passed through `${(q)...}` quoting
+# so paths with spaces survive the round-trip through `eval`.
+tt_render_slots_multi() {
+  local engines_str="$1" prompts_json="$2" cand_dir="$3"
+  local -a engines; engines=(${=engines_str})
+  local -a jobs
+  jobs=()
+  local e q_prompts q_cand
+  q_prompts=${(q)prompts_json}
+  q_cand=${(q)cand_dir}
+  for e in "${engines[@]}"; do
+    jobs+=("tt_render_slots ${(q)e} $q_prompts $q_cand >/dev/null 2>&1")
+  done
+  tt_parallel_run "${TT_VISUAL_MAX_PARALLEL:-4}" "${jobs[@]}"
+}
