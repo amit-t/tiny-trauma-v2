@@ -18,7 +18,8 @@
     "db:studio": "drizzle-kit studio",
     "content": "velite build --strict",
     "content:watch": "velite dev",
-    "test": "vitest"
+    "test": "vitest",
+    "test:visuals": "tests/visuals/run-all.zsh"
   },
   "dependencies": {
     "@react-email/components": "^1.0.12",
@@ -56,12 +57,14 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
+    "gray-matter": "^4.0.3",
     "happy-dom": "^20.9.0",
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "remark": "^15.0.1",
     "remark-html": "^16.0.1",
     "tailwindcss": "^4",
+    "tsx": "^4.22.3",
     "typescript": "^5",
     "unified": "^11.0.5",
     "vitest": "^4.1.6"
