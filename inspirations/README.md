@@ -35,15 +35,36 @@ Result: the catalog ships to GitHub but not to DigitalOcean.
 
 ## How to use
 
-1. Open Claude Code in the repo.
+1. Open Claude Code in the repo. The Playwright MCP defined in `.mcp.json`
+   auto-loads — see "First-time setup on a new machine" below if it doesn't.
 2. Edit `instagram/collections.json` — paste one or more Instagram
    saved-collection URLs.
-3. Run the `tt-instagram-ingest` skill. It walks each collection in your
-   logged-in browser via Claude-in-Chrome, dedups against the registry, and
-   writes new posts into `instagram/posts/` with TT-flavored analysis.
+3. Run the `tt-instagram-ingest` skill (or `bin/tt-ingest`). It drives a
+   headed Chromium tab via the Playwright MCP, walks each collection in
+   your logged-in IG session, dedups against the registry, and writes new
+   posts into `instagram/posts/` with TT-flavored analysis.
 4. Either browse the catalog manually (`rg`, `fzf`, your editor) or invoke
    the `tiny-trauma-content essay` flow — Step 2 surfaces the top 5
    highest-heat unused seeds automatically.
 
 When a catalog post becomes a published essay, the `status` field on the
 post flips to `shipped:<slug>` so the loop closes itself.
+
+## First-time setup on a new machine
+
+The MCP and browser are project-local (no global installs), but they have
+a per-machine bootstrap:
+
+```sh
+pnpm install              # installs @playwright/mcp + playwright
+pnpm mcp:install-browsers # downloads Chromium into ~/Library/Caches/ms-playwright
+```
+
+Then restart Claude Code so it picks up `.mcp.json`. On the first ingest
+run, a Chromium window opens — sign in to Instagram once. The session
+cookies persist in the gitignored `.playwright-profile/` directory, so
+subsequent runs on this machine are already logged in.
+
+A different machine starts with an empty `.playwright-profile/` and needs
+its own IG login the first time — there is no portable way to share
+session cookies safely.

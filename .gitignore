@@ -48,3 +48,6 @@ next-env.d.ts
 # velite build output + bundled static assets
 /.velite/
 /public/static/
+
+# playwright MCP persistent browser profile (per-machine; holds login cookies)
+/.playwright-profile/

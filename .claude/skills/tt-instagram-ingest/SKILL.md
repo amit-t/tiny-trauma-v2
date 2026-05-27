@@ -40,9 +40,12 @@ The Tiny-Trauma-private wrapper around the generic
 
 ## Prerequisites
 
-- Claude-in-Chrome extension installed and connected.
-- Chrome profile is **logged into the Instagram account that owns the saved
-  collections listed in `collections.json`**.
+- Playwright MCP auto-loaded from this repo's `.mcp.json` (after
+  `pnpm install` + `pnpm mcp:install-browsers` on a fresh checkout).
+- The persistent Chromium profile at `./.playwright-profile/` is **logged
+  into the Instagram account that owns the saved collections listed in
+  `collections.json`**. First run opens a headed window so you can sign in
+  once; cookies persist there for future runs.
 - Run from the `tiny-trauma-v2` repo root.
 
 ---

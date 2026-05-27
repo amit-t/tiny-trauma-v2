@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "pnpm",
+      "args": [
+        "exec",
+        "playwright-mcp",
+        "--user-data-dir", "./.playwright-profile"
+      ]
+    }
+  }
+}
