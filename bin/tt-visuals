@@ -269,8 +269,25 @@ for slot_dir in "$cand_root"/*(/); do
   pick=$(tt_pick_for_slot "$slot_name" "$slot_dir")
   case "$pick" in
     __quit__) print -ru2 -- "tt-visuals: user quit"; exit 6 ;;
-    __skip__|__retry__)
-      # __retry__ ignored in M2 (treated like skip); M3 wires re-render
+    __skip__) ;;
+    __retry__)
+      # Re-edit the prompt for this slot in $EDITOR, then re-render across the
+      # same engines. Single retry only — if the user picks `r` again on the
+      # follow-up pick, treat it as skip to avoid loops.
+      tt_edit_prompt_for_slot "$prompts_json_path" "$slot_name"
+      rm -rf "$slot_dir"; mkdir -p "$slot_dir"
+      for e in "${live_engines[@]}"; do
+        tt_render_slots "$e" "$prompts_json_path" "$cand_root"
+      done
+      pick=$(tt_pick_for_slot "$slot_name" "$slot_dir")
+      case "$pick" in
+        __quit__) print -ru2 -- "tt-visuals: user quit"; exit 6 ;;
+        __skip__|__retry__) ;;
+        *)
+          picks[$slot_name]="$pick"
+          tt_install_winner "$slot_name" "$pick" "$slot_dir" "$asset_dir" "$force" || exit 5
+          ;;
+      esac
       ;;
     *)
       picks[$slot_name]="$pick"

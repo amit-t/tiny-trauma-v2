@@ -68,3 +68,43 @@ tt_pick_for_slot() {
       ;;
   esac
 }
+
+# Usage: tt_edit_prompt_for_slot <prompts-json-path> <slot>
+#
+# Opens $EDITOR on a temp file pre-filled with the current prompt text for
+# <slot>, then writes the trimmed edited prompt back into prompts.json (the
+# `hero` object's `prompt`, or the matching `inline[].prompt`). Returns 0 on
+# success even if the user makes no edits (round-trip is byte-stable for the
+# unchanged case).
+tt_edit_prompt_for_slot() {
+  local prompts_json="$1" slot="$2"
+  local editor="${EDITOR:-vi}"
+  local tmpf
+  tmpf=$(mktemp -t tt-edit-prompt-XXXXXX.txt)
+  node -e '
+    const fs = require("fs");
+    const j = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+    const slot = process.argv[2];
+    let p = "";
+    if (slot === "hero" && j.hero) p = j.hero.prompt || "";
+    else {
+      const e = (j.inline || []).find(x => x.slot === slot);
+      if (e) p = e.prompt || "";
+    }
+    fs.writeFileSync(process.argv[3], p);
+  ' "$prompts_json" "$slot" "$tmpf"
+  "$editor" "$tmpf"
+  node -e '
+    const fs = require("fs");
+    const j = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+    const slot = process.argv[2];
+    const newPrompt = fs.readFileSync(process.argv[3], "utf8").trim();
+    if (slot === "hero" && j.hero) j.hero.prompt = newPrompt;
+    else {
+      const e = (j.inline || []).find(x => x.slot === slot);
+      if (e) e.prompt = newPrompt;
+    }
+    fs.writeFileSync(process.argv[1], JSON.stringify(j, null, 2));
+  ' "$prompts_json" "$slot" "$tmpf"
+  rm -f "$tmpf"
+}
