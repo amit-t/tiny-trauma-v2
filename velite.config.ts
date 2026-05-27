@@ -2,9 +2,7 @@ import { defineConfig, defineCollection, s } from "velite";
 import { remarkHandwritten } from "./lib/mdx/remark-handwritten";
 import { remarkPullquote } from "./lib/mdx/remark-pullquote";
 import { remarkAside } from "./lib/mdx/remark-aside";
-
-const heroTints = ["lavender", "sage", "butter", "peach", "slate", "none"] as const;
-const statuses = ["draft", "published"] as const;
+import { heroTints, statuses } from "./lib/mdx/post-schema";
 
 /**
  * Word/reading time are computed at build from the source markdown so the
