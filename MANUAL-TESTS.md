@@ -589,3 +589,19 @@ hardcodes the paths and bundles the Tiny-Trauma analysis template.
   catalog file's frontmatter; report so the skill prompt gets tightened.
 - **Wrong handle in extracted posts** — Chrome is logged into a different
   Instagram account. Switch profiles.
+
+---
+
+## tt-visuals (M2 — single-engine path)
+
+Prereq: `GEMINI_API_KEY` exported, or `gcloud auth` valid. Pick a real
+draft post with no `heroImage` set.
+
+- [ ] `tt-visuals --dry-run musings/<slug>` writes `public/img/musings/<slug>/.prompts.json` and exits 0
+- [ ] `tt-visuals --engine gemini musings/<slug>` renders, opens Preview, accepts choice `1`
+- [ ] Choosing `s` for hero leaves frontmatter `heroImage` unset
+- [ ] Choosing `q` mid-flow exits 6 with no mdx mutation
+- [ ] After a successful install: `pnpm content` builds without errors
+- [ ] Re-running (`tt-visuals musings/<slug>`) skips already-installed slots
+- [ ] `tt-visuals --force musings/<slug>` re-renders and backs up the old `hero.png` to `hero.bak-<ts>.png`
+- [ ] Social crops exist: `public/img/musings/<slug>/social-{1x1,4x5,16x9}.png`

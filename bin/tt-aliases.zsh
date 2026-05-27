@@ -49,3 +49,4 @@ alias tt.short.devin='tt-short --engine devin'
 # tt-visuals (visual asset generator)
 alias tt.vis='tt-visuals'
 alias tt.vis.dry='tt-visuals --dry-run'
+alias tt.vis.gemini='tt-visuals --engine gemini'
