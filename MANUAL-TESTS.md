@@ -616,7 +616,7 @@ path triggers). Use a fresh draft post for each scenario.
 - [ ] Choosing `1` for hero installs the gemini one; mdx `heroImage` points at `/img/musings/<slug>/hero.png`
 - [ ] Choosing `r` for a slot opens `$EDITOR` on the current prompt; saving the edited prompt re-renders only that slot across the same engines
 - [ ] Two consecutive `r` picks on the same slot do NOT infinite-loop (second `r` is treated as skip)
-- [ ] Post with `[[visual gif: …]]` marker writes `inline-N.gif` + `inline-N.mp4` under `public/img/musings/<slug>/`; the mdx body now uses `<video src="…inline-N.gif" autoPlay loop muted playsInline …>` for that slot
+- [ ] Post with `[[visual gif: …]]` marker writes `inline-N.gif` + `inline-N.mp4` under `public/img/musings/<slug>/`; the mdx body now uses `<video src="…inline-N.gif" autoplay loop muted playsinline aria-label="…"></video>` for that slot (explicit close tag, lowercase HTML attrs)
 - [ ] Post with `[[visual hero mp4: …]]` writes `hero-cover.mp4` + `hero.png` (poster frame); frontmatter `heroImage` points at the still
 - [ ] `pnpm content` builds cleanly after both gif and mp4 hero installs
 - [ ] If `OPENAI_API_KEY` is missing, the codex engine is skipped without aborting the run (stderr: `tt-visuals: skipping codex (CLI not on PATH)`)

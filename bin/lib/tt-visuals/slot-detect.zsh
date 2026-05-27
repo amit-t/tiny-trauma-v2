@@ -18,12 +18,17 @@ typeset -g _TT_SLOT_DETECT_SOURCED=1
 #     marker is present.
 #   - inline slots are numbered 1..N over inline + gif markers in source order.
 #   - skip markers contribute nothing.
+#   - If multiple hero markers appear (e.g. both `[[visual hero: ...]]` and
+#     `[[visual hero mp4: ...]]`, or two `[[visual hero: ...]]` markers), the
+#     LAST one in source order wins. Mixing the two in one post is unusual;
+#     the stderr warning below makes it visible at run time.
 tt_detect_slots() {
   local mdx_path="$1"
   local hero_image
   hero_image=$(tt_parse_frontmatter_field "$mdx_path" heroImage)
 
   local hero_marker=""
+  local -i hero_marker_count=0
   local -a inline_lines
   inline_lines=()
   local line
@@ -31,12 +36,15 @@ tt_detect_slots() {
     case "$line" in
       hero:empty|hero:override:*)
         hero_marker="$line"
+        (( hero_marker_count++ ))
         ;;
       hero-mp4:empty)
         hero_marker="hero-mp4:empty"
+        (( hero_marker_count++ ))
         ;;
       hero-mp4:override:*)
         hero_marker="hero-mp4:${line#hero-mp4:}"
+        (( hero_marker_count++ ))
         ;;
       inline:*|gif:*)
         inline_lines+=("$line")
@@ -45,6 +53,9 @@ tt_detect_slots() {
         ;;
     esac
   done < <(tt_parse_markers "$mdx_path")
+
+  (( hero_marker_count > 1 )) && print -ru2 -- \
+    "slot-detect: $mdx_path has $hero_marker_count hero markers; using last-wins ($hero_marker)"
 
   # hero emission
   if [[ -n "$hero_marker" ]]; then

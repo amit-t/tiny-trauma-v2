@@ -24,3 +24,20 @@ tt_test "sample-short-no-hero.mdx: hero needed, 1 inline empty"
 result=$(tt_detect_slots "$FIXTURES/sample-short-no-hero.mdx")
 assert_contains "$result" "hero:empty"
 assert_contains "$result" "inline-1:empty"
+
+# --- multiple hero markers: last-wins + stderr warning -------------------
+tt_test "sample-double-hero.mdx: last hero marker wins (hero-mp4 here)"
+WORKDIR=$(mktemp -d -t tt-slot-detect-XXXXXX)
+tt_detect_slots "$FIXTURES/sample-double-hero.mdx" \
+  >"$WORKDIR/stdout" 2>"$WORKDIR/stderr"
+stdout=$(cat "$WORKDIR/stdout")
+stderr=$(cat "$WORKDIR/stderr")
+rm -rf "$WORKDIR"
+assert_contains "$stdout" "hero-mp4:override:a slow pan across a stuttering ceiling fan, sage cast"
+# The earlier `[[visual hero: ...]]` line MUST NOT also be emitted as a slot
+# line. (Each post produces exactly one hero slot.)
+assert_not_contains "$stdout" "hero:override:a still image of a wooden door at dawn"
+
+tt_test "sample-double-hero.mdx: stderr warns about multiple hero markers"
+assert_contains "$stderr" "slot-detect:"
+assert_contains "$stderr" "2 hero markers"

@@ -183,24 +183,8 @@ typeset slot_lines_kh_file=$(mktemp -t tt-slot-lines-kh-XXXXXX)
 typeset drafter_out_kh_file=$(mktemp -t tt-drafter-out-kh-XXXXXX)
 printf '%s\n' "${slot_lines[@]}" > "$slot_lines_kh_file"
 printf '%s' "$drafter_out" > "$drafter_out_kh_file"
-drafter_out=$(node -e '
-  const fs = require("fs");
-  const j = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-  const lines = fs.readFileSync(process.argv[2], "utf8").split("\n").filter(Boolean);
-  j.kindHints = {};
-  let inlineIdx = 0;
-  for (const line of lines) {
-    if (/^hero-mp4(:|$)/.test(line))           j.kindHints.hero = "video";
-    else if (/^hero(:|$)/.test(line))          { /* still image hero */ }
-    else if (/^inline-(\d+):gif(:|$)/.test(line)) {
-      const m = line.match(/^inline-(\d+):gif/);
-      if (m) j.kindHints[`inline-${m[1]}`] = "video";
-    }
-  }
-  if (j.hero && j.kindHints.hero === "video") j.hero.kind = "video";
-  for (const e of j.inline || []) if (j.kindHints[e.slot] === "video") e.kind = "video";
-  process.stdout.write(JSON.stringify(j, null, 2));
-' "$drafter_out_kh_file" "$slot_lines_kh_file")
+drafter_out=$(node "$SCRIPT_DIR/lib/tt-visuals/enrich-kind-hints.mjs" \
+  "$drafter_out_kh_file" "$slot_lines_kh_file")
 rm -f "$slot_lines_kh_file" "$drafter_out_kh_file"
 
 print -r -- "$drafter_out" > "$prompts_json_path"
@@ -219,6 +203,8 @@ source "$SCRIPT_DIR/lib/tt-visuals/pick-ui.zsh"
 source "$SCRIPT_DIR/lib/tt-visuals/install-winner.zsh"
 source "$SCRIPT_DIR/lib/tt-visuals/rewrite-mdx.zsh"
 source "$SCRIPT_DIR/lib/tt-visuals/social-crops.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/parallel.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/orchestrate.zsh"
 
 # ---- choose engines ---------------------------------------------------------
 typeset -a engines
@@ -244,85 +230,37 @@ if (( ${#live_engines[@]} == 0 )); then
   exit 3
 fi
 
-# ---- render across engines --------------------------------------------------
+# ---- render → pick → install (extracted to orchestrate.zsh) ----------------
 typeset cand_root="/tmp/tt-visuals-${slug}-$$"
 mkdir -p "$cand_root"
-source "$SCRIPT_DIR/lib/tt-visuals/parallel.zsh"
 TT_VISUAL_MAX_PARALLEL="$max_parallel" export TT_VISUAL_MAX_PARALLEL
-# zsh arrays are 1-indexed; live_engines[1] is the first live engine.
-if (( ${#live_engines[@]} > 1 )); then
-  tt_render_slots_multi "${live_engines[*]}" "$prompts_json_path" "$cand_root" \
-    || print -ru2 -- "tt-visuals: at least one engine failed (continuing)"
-else
-  tt_render_slots "${live_engines[1]}" "$prompts_json_path" "$cand_root" \
-    || { print -ru2 -- "error: render failed"; exit 5; }
-fi
-
-# ---- pick per slot ----------------------------------------------------------
-typeset -A picks
-typeset slot_dir slot_name pick
-# nullglob via `(N)`: re-running on a fully-installed post can yield an empty
-# slot list (every marker has already been rewritten), which leaves cand_root
-# empty. The `(N)` glob qualifier makes that case expand to nothing instead of
-# erroring with `no matches found`.
-for slot_dir in "$cand_root"/*(N/); do
-  slot_name="${slot_dir:t}"
-  case "$slot_name" in
-    hero) ;;          # ok
-    inline-*) ;;      # ok
-    *) continue ;;
-  esac
-  pick=$(tt_pick_for_slot "$slot_name" "$slot_dir")
-  case "$pick" in
-    __quit__) print -ru2 -- "tt-visuals: user quit"; exit 6 ;;
-    __skip__) ;;
-    __retry__)
-      # Re-edit the prompt for this slot in $EDITOR, then re-render across the
-      # same engines. Single retry only — if the user picks `r` again on the
-      # follow-up pick, treat it as skip to avoid loops.
-      tt_edit_prompt_for_slot "$prompts_json_path" "$slot_name"
-      rm -rf "$slot_dir"; mkdir -p "$slot_dir"
-      for e in "${live_engines[@]}"; do
-        tt_render_slots "$e" "$prompts_json_path" "$cand_root"
-      done
-      pick=$(tt_pick_for_slot "$slot_name" "$slot_dir")
-      case "$pick" in
-        __quit__) print -ru2 -- "tt-visuals: user quit"; exit 6 ;;
-        __skip__|__retry__) ;;
-        *)
-          picks[$slot_name]="$pick"
-          tt_install_winner "$slot_name" "$pick" "$slot_dir" "$asset_dir" "$force" || exit 5
-          ;;
-      esac
-      ;;
-    *)
-      picks[$slot_name]="$pick"
-      tt_install_winner "$slot_name" "$pick" "$slot_dir" "$asset_dir" "$force" || exit 5
-      ;;
-  esac
-done
+typeset picks_json_file=$(mktemp -t tt-picks-XXXXXX.json)
+tt_render_pick_install \
+  "${live_engines[*]}" "$prompts_json_path" "$cand_root" \
+  "$asset_dir" "$force" "$picks_json_file"
+typeset -i orch_rc=$?
+case "$orch_rc" in
+  0) ;;
+  6) exit 6 ;;
+  *) exit "$orch_rc" ;;
+esac
 
 # ---- build installed.json for the rewriter ---------------------------------
 typeset installed_json=$(mktemp -t tt-installed-XXXXXX.json)
-typeset picks_json_file=$(mktemp -t tt-picks-XXXXXX.json)
-# Emit picks as a JSON object via node.
-{
-  print -n -- "{"
-  typeset -i first=1
-  for k in "${(@k)picks}"; do
-    if (( first )); then first=0; else print -n -- ","; fi
-    print -n -- "\"${k}\":\"${picks[$k]}\""
-  done
-  print -n -- "}"
-} > "$picks_json_file"
-
 node "$SCRIPT_DIR/lib/tt-visuals/build-installed.mjs" \
   "$type" "$slug" "$picks_json_file" "$cand_root" "$installed_json" \
   || { print -ru2 -- "tt-visuals: build-installed failed"; exit 5; }
+
+# Read picks count from the JSON to decide whether to rewrite the mdx.
+typeset -i picks_count
+picks_count=$(node -e '
+  const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+  process.stdout.write(String(Object.keys(j).length));
+' "$picks_json_file")
 rm -f "$picks_json_file"
 
 # ---- rewrite mdx atomically -------------------------------------------------
-if (( ! no_install )) && (( ${#picks[@]} > 0 )); then
+if (( ! no_install )) && (( picks_count > 0 )); then
   tt_rewrite_mdx "$mdx_path" "$installed_json" "$REPO_ROOT" || exit 5
 fi
 

@@ -15,6 +15,16 @@ const lines = readFileSync(slotLinesPath, "utf8").split("\n").filter(Boolean);
 j.overrides = {};
 for (const line of lines) {
   const m = line.match(/^(hero(?:-mp4)?|inline-\d+):(?:gif:)?override:(.+)$/);
-  if (m) j.overrides[m[1]] = m[2];
+  if (m) {
+    // The renderer (render.zsh) keys overrides by the slot name from the
+    // drafter JSON, which always uses `hero` for the hero slot — even when
+    // the marker was `[[visual hero mp4: ...]]`. The drafter never emits a
+    // `hero-mp4` key; the mp4-ness lives in `kindHints.hero === "video"`
+    // added downstream. Normalise here so `hero-mp4:override:...` lands on
+    // `overrides.hero` and the author text reaches the renderer instead of
+    // being silently dropped.
+    const key = m[1] === "hero-mp4" ? "hero" : m[1];
+    j.overrides[key] = m[2];
+  }
 }
 process.stdout.write(JSON.stringify(j, null, 2));

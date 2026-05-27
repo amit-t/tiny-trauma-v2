@@ -115,7 +115,12 @@ let inlineIdx = 0;
 //   [[visual skip]]       -> never touched (no colon)
 //
 // Inline image  → ![alt](/img/...png)
-// Inline gif/mp4 → <video src="/img/...{gif|mp4}" autoPlay loop muted playsInline />
+// Inline gif/mp4 → <video src="/img/...{gif|mp4}" autoplay loop muted playsinline ...></video>
+//   `<video>` is NOT a void element in HTML5 — the `/>` self-closing JSX form is
+//   ignored by HTML parsers, which then nest the next sibling element inside
+//   <video>. Velite's mdx pipeline treats body content as HTML, so we emit an
+//   explicit close tag and lowercase HTML attribute names (autoplay /
+//   playsinline) rather than the JSX-camelCase forms.
 // Hero markers (still or mp4) are removed from body — their effect lives in
 // frontmatter (`heroImage`, and for hero mp4 a `hero-cover.mp4` sibling).
 body = body.replace(
@@ -135,7 +140,7 @@ body = body.replace(
     const alt = `inline visual ${inlineIdx}`;
     const src = `/img/${installed.type}/${installed.slug}/${file}`;
     if (file.endsWith(".gif") || file.endsWith(".mp4")) {
-      return `<video src="${src}" autoPlay loop muted playsInline aria-label="${alt}" />`;
+      return `<video src="${src}" autoplay loop muted playsinline aria-label="${alt}"></video>`;
     }
     return `![${alt}](${src})`;
   },
