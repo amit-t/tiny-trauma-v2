@@ -51,3 +51,5 @@ next-env.d.ts
 
 # playwright MCP persistent browser profile (per-machine; holds login cookies)
 /.playwright-profile/
+# playwright MCP per-session artifacts (page snapshots, console logs)
+/.playwright-mcp/
