@@ -115,3 +115,58 @@ else
   (( TT_TEST_FAIL++ ))
   print -ru2 -- "    ✗ $PROMPTS does not exist"
 fi
+
+# --- M3: --engine all uses parallel renderer (gemini + codex live, devin
+# absent → skipped without aborting). Idempotency check too: second run on
+# the already-installed fixture must succeed under --force.
+ln -sf "$FIXTURES/stub-codex.zsh" "$TMP_BIN/codex"
+
+# Fresh fixture so we don't collide with the earlier --engine gemini run.
+mkdir -p "$TT_CONTENT_ROOT/content/musings"
+cp "$FIXTURES/sample-musing.mdx" "$TT_CONTENT_ROOT/content/musings/all-engines.mdx"
+
+binary_out2="$WORKDIR/binary-all.stdout"
+binary_err2="$WORKDIR/binary-all.stderr"
+
+printf '1\n1\n1\n1\n' \
+  | "$REPO_ROOT/bin/tt-visuals" musings/all-engines \
+      >"$binary_out2" 2>"$binary_err2"
+rc2=$?
+
+tt_test "bin/tt-visuals (default --engine all) exits 0 with two live engines"
+if (( rc2 == 0 )); then
+  (( TT_TEST_PASS++ ))
+else
+  (( TT_TEST_FAIL++ ))
+  print -ru2 -- "    ✗ exit $rc2"
+  print -ru2 -- "    stderr:"
+  sed 's/^/      /' "$binary_err2" >&2
+fi
+
+ASSET2="$TT_CONTENT_ROOT/public/img/musings/all-engines"
+tt_test "default --engine all installs hero from one of the live engines"
+assert_file_exists "$ASSET2/hero.png"
+
+# Skipping-missing-engine check is intentionally NOT asserted here: whether
+# `devin` is in stderr's skip-list depends on the host's PATH (real devin may
+# exist on the developer's machine). MANUAL-TESTS.md covers that case.
+
+# Idempotency: --only-missing default should let a second run no-op (every
+# slot is already installed). Use --force to ensure it actually re-renders
+# rather than aborting on existing files. Verify it still exits 0.
+binary_out3="$WORKDIR/binary-rerun.stdout"
+binary_err3="$WORKDIR/binary-rerun.stderr"
+printf '1\n1\n1\n1\n' \
+  | "$REPO_ROOT/bin/tt-visuals" --force musings/all-engines \
+      >"$binary_out3" 2>"$binary_err3"
+rc3=$?
+
+tt_test "second run with --force on installed fixture exits 0 (no double-render crash)"
+if (( rc3 == 0 )); then
+  (( TT_TEST_PASS++ ))
+else
+  (( TT_TEST_FAIL++ ))
+  print -ru2 -- "    ✗ exit $rc3"
+  print -ru2 -- "    stderr:"
+  sed 's/^/      /' "$binary_err3" >&2
+fi

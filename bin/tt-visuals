@@ -223,8 +223,7 @@ source "$SCRIPT_DIR/lib/tt-visuals/social-crops.zsh"
 # ---- choose engines ---------------------------------------------------------
 typeset -a engines
 if [[ "$engine" == "all" ]]; then
-  # M2: 'all' === just gemini (only implemented branch). M3 expands.
-  engines=(gemini)
+  engines=(gemini codex devin)
 else
   engines=("$engine")
 fi
@@ -248,18 +247,25 @@ fi
 # ---- render across engines --------------------------------------------------
 typeset cand_root="/tmp/tt-visuals-${slug}-$$"
 mkdir -p "$cand_root"
-typeset -i any_render=0
-for e in "${live_engines[@]}"; do
-  if tt_render_slots "$e" "$prompts_json_path" "$cand_root"; then
-    (( any_render++ ))
-  fi
-done
-(( any_render > 0 )) || { print -ru2 -- "error: every engine failed"; exit 5; }
+source "$SCRIPT_DIR/lib/tt-visuals/parallel.zsh"
+TT_VISUAL_MAX_PARALLEL="$max_parallel" export TT_VISUAL_MAX_PARALLEL
+# zsh arrays are 1-indexed; live_engines[1] is the first live engine.
+if (( ${#live_engines[@]} > 1 )); then
+  tt_render_slots_multi "${live_engines[*]}" "$prompts_json_path" "$cand_root" \
+    || print -ru2 -- "tt-visuals: at least one engine failed (continuing)"
+else
+  tt_render_slots "${live_engines[1]}" "$prompts_json_path" "$cand_root" \
+    || { print -ru2 -- "error: render failed"; exit 5; }
+fi
 
 # ---- pick per slot ----------------------------------------------------------
 typeset -A picks
 typeset slot_dir slot_name pick
-for slot_dir in "$cand_root"/*(/); do
+# nullglob via `(N)`: re-running on a fully-installed post can yield an empty
+# slot list (every marker has already been rewritten), which leaves cand_root
+# empty. The `(N)` glob qualifier makes that case expand to nothing instead of
+# erroring with `no matches found`.
+for slot_dir in "$cand_root"/*(N/); do
   slot_name="${slot_dir:t}"
   case "$slot_name" in
     hero) ;;          # ok
