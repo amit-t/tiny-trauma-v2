@@ -49,6 +49,13 @@ tt_run_drafter() {
 }
 
 # Internal: validate that $1 parses as JSON and matches the slot list $2.
+#
+# Strict checks:
+#   - shape: { hero: object|null, inline: array }
+#   - if "hero" in $slots_json → j.hero must be a non-null object with string prompt
+#   - if "hero" NOT in $slots_json → j.hero must be null (non-null = reject)
+#   - every j.inline[].slot must appear in $slots_json
+#   - every requested inline slot must appear exactly once in j.inline
 tt__validate_draft_json() {
   local raw="$1" slots_json="$2"
   node -e '
@@ -59,12 +66,21 @@ tt__validate_draft_json() {
       if (!("hero" in j) || !("inline" in j)) process.exit(1);
       if (!Array.isArray(j.inline)) process.exit(1);
       const wantHero = slots.includes("hero");
-      if (wantHero && (!j.hero || typeof j.hero.prompt !== "string")) process.exit(1);
-      if (!wantHero && j.hero !== null) {
-        // tolerate non-null but ignored
+      if (wantHero) {
+        if (!j.hero || typeof j.hero.prompt !== "string") process.exit(1);
+      } else {
+        if (j.hero !== null) process.exit(1);
       }
+      const wantInline = new Set(slots.filter(s => s !== "hero"));
+      const sawInline = new Set();
       for (const e of j.inline) {
         if (typeof e.slot !== "string" || typeof e.prompt !== "string") process.exit(1);
+        if (!wantInline.has(e.slot)) process.exit(1);
+        if (sawInline.has(e.slot)) process.exit(1);
+        sawInline.add(e.slot);
+      }
+      for (const s of wantInline) {
+        if (!sawInline.has(s)) process.exit(1);
       }
       process.exit(0);
     } catch (_) { process.exit(1); }

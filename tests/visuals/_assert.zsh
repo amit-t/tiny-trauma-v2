@@ -33,6 +33,18 @@ assert_contains() {
   fi
 }
 
+assert_not_contains() {
+  local haystack="$1" needle="$2" msg="${3:-}"
+  if [[ "$haystack" != *"$needle"* ]]; then
+    (( TT_TEST_PASS++ ))
+  else
+    (( TT_TEST_FAIL++ ))
+    print -ru2 -- "    ✗ $TT_TEST_CURRENT ${msg:+($msg) }"
+    print -ru2 -- "      haystack: ${(qqq)haystack}"
+    print -ru2 -- "      unexpected needle: ${(qqq)needle}"
+  fi
+}
+
 assert_file_exists() {
   local path="$1" msg="${2:-}"
   if [[ -f "$path" ]]; then

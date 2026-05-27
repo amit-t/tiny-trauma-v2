@@ -1,13 +1,12 @@
 #!/usr/bin/env zsh
 # bin/tt-visuals — generate hero / inline / gif / social-crop assets for one
-# Tiny Trauma essay or short. PR1 ships --dry-run only.
+# Tiny Trauma essay or short. M1 ships --dry-run only.
 
 set -u
 script_path=${0:A}
 SCRIPT_DIR="${script_path:h}"
 REPO_ROOT="${SCRIPT_DIR:h}"
 
-source "$SCRIPT_DIR/_tt-engine.zsh"
 source "$SCRIPT_DIR/lib/tt-visuals/parse-mdx.zsh"
 source "$SCRIPT_DIR/lib/tt-visuals/slot-detect.zsh"
 source "$SCRIPT_DIR/lib/tt-visuals/draft.zsh"
@@ -44,6 +43,8 @@ typeset engine="all"
 typeset slots_csv="hero,inline,social"
 typeset draft_engine="claude"
 typeset -i dry_run=0 no_draft=0 no_install=0 only_missing=1 force=0 keep_cand=0 help=0
+# Note: --force, --only-missing, --keep-candidates are parsed here but
+# consumed by the M2 render path. Safe no-ops under --dry-run.
 typeset max_parallel="${TT_VISUAL_MAX_PARALLEL:-4}"
 
 while (( $# > 0 )); do
@@ -160,18 +161,16 @@ else
   drafter_out=$(tt_run_drafter "$mdx_path" "$slots_json") || exit $?
 fi
 
-# Merge inline overrides into drafter_out so .prompts.json is the source of truth.
-drafter_out=$(node -e '
-  const raw = process.argv[1];
-  const slotLines = JSON.parse(process.argv[2]);
-  const j = JSON.parse(raw);
-  j.overrides = {};
-  for (const line of slotLines) {
-    const m = line.match(/^(hero(?:-mp4)?|inline-\d+):(?:gif:)?override:(.+)$/);
-    if (m) j.overrides[m[1]] = m[2];
-  }
-  process.stdout.write(JSON.stringify(j, null, 2));
-' "$drafter_out" "$(printf '%s\n' "${slot_lines[@]}" | node -e 'let d=""; process.stdin.on("data",c=>d+=c); process.stdin.on("end",()=>{process.stdout.write(JSON.stringify(d.split("\n").filter(Boolean)))})')")
+# Merge inline overrides into drafter_out via a small node helper.
+# Skipped under --no-draft so an author-edited .overrides block is preserved verbatim.
+if (( ! no_draft )); then
+  typeset slot_lines_file=$(mktemp -t tt-slot-lines-XXXXXX)
+  typeset drafter_out_file=$(mktemp -t tt-drafter-out-XXXXXX)
+  printf '%s\n' "${slot_lines[@]}" > "$slot_lines_file"
+  printf '%s' "$drafter_out" > "$drafter_out_file"
+  drafter_out=$(node "$SCRIPT_DIR/lib/tt-visuals/merge-overrides.mjs" "$drafter_out_file" "$slot_lines_file")
+  rm -f "$slot_lines_file" "$drafter_out_file"
+fi
 
 print -r -- "$drafter_out" > "$prompts_json_path"
 
@@ -183,6 +182,6 @@ if (( dry_run )); then
   exit 0
 fi
 
-# PR1 ends here. PR2 wires the render path.
-print -ru2 -- "tt-visuals: rendering is not implemented in this build. Use --dry-run."
+# M2 wires the render path.
+print -ru2 -- "tt-visuals: rendering is not implemented in this build (M2). Use --dry-run."
 exit 2

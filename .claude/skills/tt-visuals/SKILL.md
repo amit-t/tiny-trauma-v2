@@ -28,6 +28,8 @@ Read these in order:
 
 ## Flow
 
+> Note: M1 of this skill ships only the dry-run drafter path. Render, pick, install, social-crops, and atomic mdx rewrite arrive in M2/M3.
+
 1. Parse the mdx: frontmatter, body, and every `[[visual ...]]` marker.
 2. Detect slots: hero (if `frontmatter.heroImage` missing OR
    `[[visual hero: ...]]` present), inline-N (one per inline marker),

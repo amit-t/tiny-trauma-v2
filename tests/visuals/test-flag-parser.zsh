@@ -46,3 +46,17 @@ before=$(shasum -a 256 "$TMP_CONTENT/content/musings/the-kettle.mdx")
 "$BIN" --dry-run musings/the-kettle >/dev/null 2>&1
 after=$(shasum -a 256 "$TMP_CONTENT/content/musings/the-kettle.mdx")
 assert_eq "$before" "$after"
+
+tt_test "--no-draft preserves a pre-existing .overrides block verbatim"
+# Seed a .prompts.json containing a sentinel override entry. --no-draft must
+# load it and write it back unchanged (no override-merge clobber).
+prompts_path="$TMP_CONTENT/public/img/musings/the-kettle/.prompts.json"
+mkdir -p "${prompts_path:h}"
+print -r -- '{"hero":{"prompt":"original"},"inline":[],"overrides":{"hero":"MARKER_VALUE"}}' > "$prompts_path"
+"$BIN" --dry-run --no-draft musings/the-kettle >/dev/null 2>&1
+rc=$?
+assert_eq "0" "$rc"
+marker=$(node -e 'const fs=require("fs"); const j=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write(j.overrides && j.overrides.hero ? j.overrides.hero : "")' "$prompts_path")
+assert_eq "MARKER_VALUE" "$marker"
+hero_prompt=$(node -e 'const fs=require("fs"); const j=JSON.parse(fs.readFileSync(process.argv[1],"utf8")); process.stdout.write(j.hero && j.hero.prompt ? j.hero.prompt : "")' "$prompts_path")
+assert_eq "original" "$hero_prompt"
