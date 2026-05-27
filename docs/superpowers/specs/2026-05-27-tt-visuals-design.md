@@ -101,9 +101,15 @@ falls through as literal text fallback rather than breaking the build.
 ```
 [[visual: <prompt override>]]            # inline still image, default style
 [[visual gif: <prompt override>]]        # inline animated loop (2–5s), uses video engine
-[[visual hero: <prompt override>]]       # override hero prompt mid-body (rare)
+[[visual hero: <prompt override>]]       # override hero prompt (still image)
+[[visual hero mp4: <prompt override>]]   # hero as a looping mp4 (writes hero-cover.mp4 + hero.png poster frame)
 [[visual skip]]                          # explicit "no image here" — drafter must not fill
 ```
+
+Hero mp4 still produces `hero.png` (poster frame, extracted by ffmpeg from
+the first frame of the mp4) so `frontmatter.heroImage` always points at a
+still image. `hero-cover.mp4` is rendered by a future `<HeroVideo>`
+component opt-in; absence of the mp4 falls back to the still.
 
 Position in source = render position. The drafter receives the surrounding
 paragraph as caption-context when filling an empty `[[visual:]]`.
@@ -114,7 +120,7 @@ paragraph as caption-context when filling an empty `[[visual:]]`.
 |------|----------------|---------------|
 | `hero` | `frontmatter.heroImage` absent **or** explicit `[[visual hero: ...]]` present | inline override > drafter; skip if `heroImage` already set and no override |
 | `inline-N` | one per `[[visual: ...]]` or `[[visual gif: ...]]` marker, source-order | inline text wins; drafter fills only bracket-only `[[visual:]]` (empty body) |
-| `social-1x1` / `4x5` / `16x9` | always, after hero is final | ffmpeg centered crop, no prompt |
+| `social-1x1` / `4x5` / `16x9` | only when a hero exists at install time (skipped if user `s`-skipped hero or `--slots` excludes `social`) | ffmpeg centered crop on `hero.png`, no prompt |
 
 ## Prompt drafter
 
@@ -300,7 +306,7 @@ Centered crop in v1. Saliency-based smart-crop deferred.
 
 ```
 tt-visuals <type/slug>           # required positional: musings/<slug> or shorts/<slug>
-  [--engine claude|codex|gemini|devin|all]   # default: all (parallel pick)
+  [--engine codex|gemini|devin|all]          # default: all (parallel pick). `claude` is rejected here — it has no image-gen capability and is only valid for --draft-engine.
   [--slots hero,inline,social,gif]           # default: hero,inline,social
   [--only-missing]                           # default behaviour; --force overrides
   [--force]                                  # re-render even slots already installed
@@ -394,20 +400,24 @@ planning).
 Three PRs, smallest first. Each independently revertable.
 
 1. **Skill + style guide + dry-run only.** Ships the `tt-visuals` skill
-   folder, `bin/tt-visuals` binary, marker parser, drafter, `--dry-run`.
-   No real image gen — only writes `.prompts.json`. Mergeable + immediately
-   useful for iterating on `visual-style.md` without spending a cent on
-   Imagen / GPT-Image. Includes `visual-style.md` v1.
+   folder (incl. `engines/gemini.md` recipe stub), `bin/tt-visuals`
+   binary, marker parser, drafter, `--dry-run`. Does **not** ship
+   `bin/_engine_run.zsh` yet — drafter writes `.prompts.json` and exits.
+   Mergeable + immediately useful for iterating on `visual-style.md`
+   without spending a cent on Imagen / GPT-Image. Includes
+   `visual-style.md` v1.
 
-2. **Single-engine render + Preview pick + mdx rewrite.** Adds `--engine`
-   flag, real `gemini` invocation, Preview pick UI, atomic mdx rewrite,
-   idempotent re-runs. Single engine = the simplest happy path. Codex /
-   devin recipes deferred.
+2. **Single-engine render + Preview pick + mdx rewrite.** Adds
+   `bin/_engine_run.zsh`, the `--engine gemini` path, real `gemini` CLI
+   invocation, Preview pick UI, atomic mdx rewrite, idempotent re-runs.
+   Single engine = the simplest happy path. Codex / devin recipes
+   deferred. Social crops also land here (cheap, ffmpeg-only).
 
-3. **Parallel `--engine all` + GIF/video + social crops + remaining engines.**
-   Adds codex + devin engine recipes, parallel orchestration, ffmpeg
-   gif/mp4 + social crop post-step, candidate pruning, retry-edit (`r`)
-   escape hatch.
+3. **Parallel `--engine all` + GIF/video + remaining engines.** Adds
+   `engines/codex.md` + `engines/devin.md`, parallel orchestration,
+   ffmpeg gif/mp4 post-step, candidate pruning, retry-edit (`r`) escape
+   hatch in the pick UI, `[[visual gif: ...]]` + `[[visual hero mp4: ...]]`
+   marker handling.
 
 Backout: each PR is one new directory plus one new binary. Revert = `git
 revert`; no schema migrations, no runtime services, no third-party
