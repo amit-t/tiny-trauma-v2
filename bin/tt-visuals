@@ -1,0 +1,188 @@
+#!/usr/bin/env zsh
+# bin/tt-visuals — generate hero / inline / gif / social-crop assets for one
+# Tiny Trauma essay or short. PR1 ships --dry-run only.
+
+set -u
+script_path=${0:A}
+SCRIPT_DIR="${script_path:h}"
+REPO_ROOT="${SCRIPT_DIR:h}"
+
+source "$SCRIPT_DIR/_tt-engine.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/parse-mdx.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/slot-detect.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/draft.zsh"
+
+usage() {
+  cat <<'EOF'
+tt-visuals — generate visuals for a Tiny Trauma post.
+
+Usage:
+  tt-visuals <type/slug> [flags]
+
+Required:
+  <type/slug>                 e.g. musings/the-kettle  or  shorts/the-list
+
+Flags:
+  --engine NAME               codex|gemini|devin|all (default: all). `claude` rejected.
+  --slots LIST                comma-separated: hero,inline,social,gif (default: hero,inline,social)
+  --only-missing              default; --force overrides
+  --force                     re-render even slots already installed
+  --draft-engine NAME         claude|gemini|codex (default: claude)
+  --no-draft                  skip drafter, load existing .prompts.json
+  --dry-run                   write .prompts.json, no API calls
+  --no-install                render + pick, skip mdx rewrite + file install
+  --keep-candidates           don't prune losers after install
+  --max-parallel N            override TT_VISUAL_MAX_PARALLEL
+  -h, --help                  show this help
+EOF
+}
+
+# ---- parse flags ------------------------------------------------------------
+
+typeset target=""
+typeset engine="all"
+typeset slots_csv="hero,inline,social"
+typeset draft_engine="claude"
+typeset -i dry_run=0 no_draft=0 no_install=0 only_missing=1 force=0 keep_cand=0 help=0
+typeset max_parallel="${TT_VISUAL_MAX_PARALLEL:-4}"
+
+while (( $# > 0 )); do
+  case "$1" in
+    --engine)         engine="$2"; shift 2 ;;
+    --engine=*)       engine="${1#--engine=}"; shift ;;
+    --slots)          slots_csv="$2"; shift 2 ;;
+    --slots=*)        slots_csv="${1#--slots=}"; shift ;;
+    --draft-engine)   draft_engine="$2"; shift 2 ;;
+    --draft-engine=*) draft_engine="${1#--draft-engine=}"; shift ;;
+    --dry-run)        dry_run=1; shift ;;
+    --no-draft)       no_draft=1; shift ;;
+    --no-install)     no_install=1; shift ;;
+    --only-missing)   only_missing=1; shift ;;
+    --force)          force=1; only_missing=0; shift ;;
+    --keep-candidates) keep_cand=1; shift ;;
+    --max-parallel)   max_parallel="$2"; shift 2 ;;
+    -h|--help)        help=1; shift ;;
+    --)               shift; break ;;
+    -*)               print -ru2 -- "error: unknown flag: $1"; exit 2 ;;
+    *)
+      if [[ -z "$target" ]]; then target="$1"
+      else print -ru2 -- "error: unexpected positional: $1"; exit 2
+      fi
+      shift ;;
+  esac
+done
+
+(( help )) && { usage; exit 0; }
+if [[ -z "$target" ]]; then
+  print -ru2 -- "error: target required (e.g. musings/the-kettle)"
+  usage
+  exit 2
+fi
+
+# Reject --engine claude — claude has no image gen.
+if [[ "$engine" == "claude" ]]; then
+  print -ru2 -- "error: --engine claude is invalid (no image generation capability). Use --draft-engine claude instead."
+  exit 2
+fi
+
+# Validate target shape.
+case "$target" in
+  musings/*|shorts/*) ;;
+  *) print -ru2 -- "error: target must be musings/<slug> or shorts/<slug>"; exit 2 ;;
+esac
+
+typeset type="${target%%/*}"
+typeset slug="${target##*/}"
+
+# Resolve paths (overridable for tests via TT_CONTENT_ROOT, TT_SKILL_DIR).
+typeset CONTENT_ROOT="${TT_CONTENT_ROOT:-$REPO_ROOT}"
+typeset mdx_path="$CONTENT_ROOT/content/$target.mdx"
+typeset asset_dir="$CONTENT_ROOT/public/img/$type/$slug"
+
+if [[ ! -f "$mdx_path" ]]; then
+  print -ru2 -- "error: mdx not found: $mdx_path"
+  exit 2
+fi
+
+mkdir -p "$asset_dir"
+
+# ---- detect slots -----------------------------------------------------------
+
+typeset -a slot_lines
+slot_lines=()
+while IFS= read -r line; do
+  slot_lines+=("$line")
+done < <(tt_detect_slots "$mdx_path")
+
+# Build slot name list for drafter (only names of slots without override text).
+typeset -a need_draft
+need_draft=()
+for line in "${slot_lines[@]}"; do
+  case "$line" in
+    hero:empty)              need_draft+=("hero") ;;
+    hero-mp4:empty)          need_draft+=("hero") ;;   # mp4 hero still needs a prompt
+    inline-*:empty)          need_draft+=("${line%%:*}") ;;
+    inline-*:gif:empty)      need_draft+=("${line%%:*}") ;;
+  esac
+done
+
+# ---- drafter ----------------------------------------------------------------
+
+typeset prompts_json_path="$asset_dir/.prompts.json"
+typeset drafter_out=""
+
+if (( no_draft )); then
+  if [[ ! -f "$prompts_json_path" ]]; then
+    print -ru2 -- "error: --no-draft passed but $prompts_json_path does not exist"
+    exit 2
+  fi
+  drafter_out=$(cat "$prompts_json_path")
+else
+  # Resolve drafter binary.
+  typeset draft_bin
+  case "$draft_engine" in
+    claude)  draft_bin="${TT_DRAFT_ENGINE_BIN:-claude}" ;;
+    gemini)  draft_bin="gemini" ;;
+    codex)   draft_bin="codex" ;;
+    *) print -ru2 -- "error: unsupported --draft-engine: $draft_engine"; exit 2 ;;
+  esac
+  TT_DRAFT_ENGINE_BIN="$draft_bin" export TT_DRAFT_ENGINE_BIN
+
+  typeset slots_json
+  slots_json=$(printf '%s\n' "${need_draft[@]}" | node -e '
+    let lines = ""; process.stdin.on("data",c=>lines+=c);
+    process.stdin.on("end",()=>{
+      const arr = lines.split("\n").filter(Boolean);
+      process.stdout.write(JSON.stringify(arr));
+    });
+  ')
+
+  drafter_out=$(tt_run_drafter "$mdx_path" "$slots_json") || exit $?
+fi
+
+# Merge inline overrides into drafter_out so .prompts.json is the source of truth.
+drafter_out=$(node -e '
+  const raw = process.argv[1];
+  const slotLines = JSON.parse(process.argv[2]);
+  const j = JSON.parse(raw);
+  j.overrides = {};
+  for (const line of slotLines) {
+    const m = line.match(/^(hero(?:-mp4)?|inline-\d+):(?:gif:)?override:(.+)$/);
+    if (m) j.overrides[m[1]] = m[2];
+  }
+  process.stdout.write(JSON.stringify(j, null, 2));
+' "$drafter_out" "$(printf '%s\n' "${slot_lines[@]}" | node -e 'let d=""; process.stdin.on("data",c=>d+=c); process.stdin.on("end",()=>{process.stdout.write(JSON.stringify(d.split("\n").filter(Boolean)))})')")
+
+print -r -- "$drafter_out" > "$prompts_json_path"
+
+# ---- dry-run exit -----------------------------------------------------------
+
+if (( dry_run )); then
+  print -r -- "[dry-run] wrote $prompts_json_path"
+  print -r -- "[dry-run] slots: ${(j:, :)slot_lines[@]}"
+  exit 0
+fi
+
+# PR1 ends here. PR2 wires the render path.
+print -ru2 -- "tt-visuals: rendering is not implemented in this build. Use --dry-run."
+exit 2
