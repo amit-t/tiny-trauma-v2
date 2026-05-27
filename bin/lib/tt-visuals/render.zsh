@@ -5,8 +5,28 @@
 [[ -n "${_TT_RENDER_SOURCED:-}" ]] && return 0
 typeset -g _TT_RENDER_SOURCED=1
 
+# Usage: tt__slot_kind <prompts-json> <slot>
+# Prints "video" if the slot's payload carries kind=video (gif / hero-mp4),
+# otherwise "image". M3 hint, plumbed through from bin/tt-visuals'
+# kindHints enrichment of the drafter output.
+tt__slot_kind() {
+  local prompts_json="$1" slot="$2"
+  node -e '
+    const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+    const slot = process.argv[2];
+    let kind = "image";
+    if (slot === "hero" && j.hero && j.hero.kind === "video") kind = "video";
+    else {
+      const inl = (j.inline || []).find(e => e.slot === slot);
+      if (inl && inl.kind === "video") kind = "video";
+    }
+    process.stdout.write(kind);
+  ' "$prompts_json" "$slot"
+}
+
 # Usage: tt_render_slots <engine> <prompts-json-path> <candidates-dir>
-# Creates <candidates-dir>/<slot>/<engine>.png for every slot in the JSON.
+# Creates <candidates-dir>/<slot>/<engine>.{png|mp4} for every slot in the JSON.
+# The extension is `mp4` for gif / hero-mp4 slots, `png` otherwise.
 tt_render_slots() {
   local engine="$1" prompts_json="$2" cand_dir="$3"
   # ${(%):-%x} inside a function expands to *this* file's path
@@ -47,10 +67,15 @@ tt_render_slots() {
 
     prompt_file=$(mktemp -t tt-render-prompt-XXXXXX)
     print -r -- "$payload" > "$prompt_file"
-    out_file="$slot_dir/${engine}.png"
+
+    # Dispatch image vs video based on the slot's kind hint in prompts.json.
+    local kind ext
+    kind=$(tt__slot_kind "$prompts_json" "$slot")
+    if [[ "$kind" == "video" ]]; then ext=mp4; else ext=png; fi
+    out_file="$slot_dir/${engine}.${ext}"
 
     start_ms=$(python3 -c 'import time; print(int(time.time()*1000))')
-    "$engine_run" "$engine" "$prompt_file" "$out_file"
+    TT_VISUAL_KIND="$kind" "$engine_run" "$engine" "$prompt_file" "$out_file"
     rc=$?
     end_ms=$(python3 -c 'import time; print(int(time.time()*1000))')
 

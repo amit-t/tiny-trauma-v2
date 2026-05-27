@@ -108,38 +108,36 @@ if (installed.hero) {
 let body = split.body;
 let inlineIdx = 0;
 // Marker grammar (mirrors parse-mdx.zsh):
-//   [[visual:]]           [[visual: text]]            -> inline image
-//   [[visual gif:]]       [[visual gif: text]]        -> inline (M3)
-//   [[visual hero:]]      [[visual hero: text]]       -> hero (frontmatter)
-//   [[visual hero mp4:]]  [[visual hero mp4: text]]   -> hero mp4 (M3)
-//   [[visual skip]]       -> never touched
+//   [[visual:]]           [[visual: text]]            -> inline image (.png)
+//   [[visual gif:]]       [[visual gif: text]]        -> inline video (.gif|.mp4)
+//   [[visual hero:]]      [[visual hero: text]]       -> hero still (frontmatter)
+//   [[visual hero mp4:]]  [[visual hero mp4: text]]   -> hero mp4 + still poster
+//   [[visual skip]]       -> never touched (no colon)
 //
-// M2 handles the inline-image branch only; hero markers are removed from body
-// text (their effect lives in frontmatter); gif/hero-mp4 markers are removed
-// from body (M3 will replace them). Skip is naturally excluded — it has no
-// colon, so the regex below skips it.
+// Inline image  → ![alt](/img/...png)
+// Inline gif/mp4 → <video src="/img/...{gif|mp4}" autoPlay loop muted playsInline />
+// Hero markers (still or mp4) are removed from body — their effect lives in
+// frontmatter (`heroImage`, and for hero mp4 a `hero-cover.mp4` sibling).
 body = body.replace(
   /\[\[visual( gif| hero mp4| hero)?:([^\]]*)\]\]/g,
-  (_match, kindRaw: string | undefined): string => {
+  (match, kindRaw: string | undefined): string => {
     const kind = (kindRaw ?? "").trim();
     if (kind === "hero" || kind === "hero mp4") return "";
-    if (kind === "gif") {
-      // M3 will wire this; for now, leave a no-op placeholder (delete the
-      // marker so the body doesn't render literal brackets).
-      return "";
-    }
-    // plain inline
+    // both plain inline and gif consume an inline slot index, in source order.
     inlineIdx++;
     const file = installed.inline?.[inlineIdx - 1];
     if (!file) {
-      // TODO M3: under partial-install (some slots skipped), subsequent runs
-      // would re-detect markers in source order and could rewrite the wrong
-      // slot. Not reachable in M2 because the binary always installs all picks
-      // before rewriting. Revisit when --no-install + --resume lands.
-      return `[[visual:]]`;
+      // Under partial-install (some slots skipped), preserve the marker so a
+      // subsequent run can fill it. Choose the source-form of the marker so we
+      // don't lose author intent (e.g. `gif:` stays `gif:`).
+      return match;
     }
-    const alt = `inline image ${inlineIdx}`;
-    return `![${alt}](/img/${installed.type}/${installed.slug}/${file})`;
+    const alt = `inline visual ${inlineIdx}`;
+    const src = `/img/${installed.type}/${installed.slug}/${file}`;
+    if (file.endsWith(".gif") || file.endsWith(".mp4")) {
+      return `<video src="${src}" autoPlay loop muted playsInline aria-label="${alt}" />`;
+    }
+    return `![${alt}](${src})`;
   },
 );
 

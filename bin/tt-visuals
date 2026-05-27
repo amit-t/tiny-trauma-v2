@@ -6,6 +6,7 @@ set -u
 script_path=${0:A}
 SCRIPT_DIR="${script_path:h}"
 REPO_ROOT="${SCRIPT_DIR:h}"
+export REPO_ROOT  # install-winner.zsh's hero-mp4 / inline-gif branches need this
 
 source "$SCRIPT_DIR/lib/tt-visuals/parse-mdx.zsh"
 source "$SCRIPT_DIR/lib/tt-visuals/slot-detect.zsh"
@@ -115,15 +116,18 @@ while IFS= read -r line; do
   slot_lines+=("$line")
 done < <(tt_detect_slots "$mdx_path")
 
-# Build slot name list for drafter (only names of slots without override text).
+# Build slot name list for drafter. Every slot the renderer needs to fill
+# must be asked of the drafter — even slots with override text, because the
+# override only replaces `prompt`, not the surrounding payload (negative,
+# aspect, tint). merge-overrides.mjs overlays the override text afterwards.
 typeset -a need_draft
 need_draft=()
 for line in "${slot_lines[@]}"; do
   case "$line" in
-    hero:empty)              need_draft+=("hero") ;;
-    hero-mp4:empty)          need_draft+=("hero") ;;   # mp4 hero still needs a prompt
-    inline-*:empty)          need_draft+=("${line%%:*}") ;;
-    inline-*:gif:empty)      need_draft+=("${line%%:*}") ;;
+    hero:empty|hero:override:*)               need_draft+=("hero") ;;
+    hero-mp4:empty|hero-mp4:override:*)       need_draft+=("hero") ;;   # mp4 hero still needs a prompt
+    inline-*:empty|inline-*:override:*)       need_draft+=("${line%%:*}") ;;
+    inline-*:gif:empty|inline-*:gif:override:*) need_draft+=("${line%%:*}") ;;
   esac
 done
 
@@ -171,6 +175,33 @@ if (( ! no_draft )); then
   drafter_out=$(node "$SCRIPT_DIR/lib/tt-visuals/merge-overrides.mjs" "$drafter_out_file" "$slot_lines_file")
   rm -f "$slot_lines_file" "$drafter_out_file"
 fi
+
+# Enrich the prompts JSON with per-slot kind hints based on the marker
+# grammar. gif → inline kind=video; hero-mp4 → hero.kind=video. Renderer
+# uses this to dispatch TT_VISUAL_KIND=video and pick a .mp4 extension.
+typeset slot_lines_kh_file=$(mktemp -t tt-slot-lines-kh-XXXXXX)
+typeset drafter_out_kh_file=$(mktemp -t tt-drafter-out-kh-XXXXXX)
+printf '%s\n' "${slot_lines[@]}" > "$slot_lines_kh_file"
+printf '%s' "$drafter_out" > "$drafter_out_kh_file"
+drafter_out=$(node -e '
+  const fs = require("fs");
+  const j = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
+  const lines = fs.readFileSync(process.argv[2], "utf8").split("\n").filter(Boolean);
+  j.kindHints = {};
+  let inlineIdx = 0;
+  for (const line of lines) {
+    if (/^hero-mp4(:|$)/.test(line))           j.kindHints.hero = "video";
+    else if (/^hero(:|$)/.test(line))          { /* still image hero */ }
+    else if (/^inline-(\d+):gif(:|$)/.test(line)) {
+      const m = line.match(/^inline-(\d+):gif/);
+      if (m) j.kindHints[`inline-${m[1]}`] = "video";
+    }
+  }
+  if (j.hero && j.kindHints.hero === "video") j.hero.kind = "video";
+  for (const e of j.inline || []) if (j.kindHints[e.slot] === "video") e.kind = "video";
+  process.stdout.write(JSON.stringify(j, null, 2));
+' "$drafter_out_kh_file" "$slot_lines_kh_file")
+rm -f "$slot_lines_kh_file" "$drafter_out_kh_file"
 
 print -r -- "$drafter_out" > "$prompts_json_path"
 
@@ -263,7 +294,7 @@ typeset picks_json_file=$(mktemp -t tt-picks-XXXXXX.json)
 } > "$picks_json_file"
 
 node "$SCRIPT_DIR/lib/tt-visuals/build-installed.mjs" \
-  "$type" "$slug" "$picks_json_file" "$installed_json" \
+  "$type" "$slug" "$picks_json_file" "$cand_root" "$installed_json" \
   || { print -ru2 -- "tt-visuals: build-installed failed"; exit 5; }
 rm -f "$picks_json_file"
 
