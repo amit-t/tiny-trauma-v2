@@ -54,3 +54,6 @@ next-env.d.ts
 /public/img/**/*.bak-*
 /tmp/tt-visuals-*/
 /public/img/**/.prompts.json.tmp
+
+# playwright MCP persistent browser profile (per-machine; holds login cookies)
+/.playwright-profile/

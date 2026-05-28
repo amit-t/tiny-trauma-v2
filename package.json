@@ -19,7 +19,8 @@
     "content": "velite build --strict",
     "content:watch": "velite dev",
     "test": "vitest",
-    "test:visuals": "tests/visuals/run-all.zsh"
+    "test:visuals": "tests/visuals/run-all.zsh",
+    "mcp:install-browsers": "playwright install chromium"
   },
   "dependencies": {
     "@react-email/components": "^1.0.12",
@@ -46,6 +47,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/mcp": "latest",
     "@tailwindcss/postcss": "^4",
     "@types/mdast": "^4.0.4",
     "@types/node": "^20",
@@ -59,6 +61,7 @@
     "eslint-config-next": "16.2.6",
     "gray-matter": "^4.0.3",
     "happy-dom": "^20.9.0",
+    "playwright": "latest",
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "remark": "^15.0.1",

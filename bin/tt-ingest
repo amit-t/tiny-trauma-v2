@@ -30,6 +30,17 @@ Options:
 
 Note: the positional `dry-run` MODE is a skill behavior, distinct from the
 CLI's `--dry-run` flag.
+
+Browser requirement (ingest mode):
+  Phase 1 navigates Instagram in a headed Chromium driven by the
+  Playwright MCP (configured in this repo's .mcp.json). First-time setup
+  on any machine:
+    pnpm install
+    pnpm mcp:install-browsers
+    # restart Claude Code so the MCP loads; first run opens Chromium —
+    # sign in to IG once; the session persists in ./.playwright-profile/.
+
+  `rebuild-registry` and `dry-run` modes do not need the browser.
 EOF
 }
 

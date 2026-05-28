@@ -2,14 +2,9 @@
   "$comment": "Edit this file to add or remove Instagram saved-collection URLs the tt-instagram-ingest skill should pull from. The whole inspirations/ directory is git-tracked but unused by the Next/Velite build, so it never ships to production.",
   "collections": [
     {
-      "name": "tiny-trauma-musings",
-      "url": "https://www.instagram.com/<your-handle>/saved/tiny-trauma-musings/<collection-id>/",
-      "default_seed_type": "musing"
-    },
-    {
-      "name": "tiny-trauma-shorts",
-      "url": "https://www.instagram.com/<your-handle>/saved/tiny-trauma-shorts/<collection-id>/",
-      "default_seed_type": "short"
+      "name": "tiny-trauma",
+      "url": "https://www.instagram.com/amit.m.tiwari/saved/tiny-trauma/18036268628552745/",
+      "default_seed_type": null
     }
   ]
 }
