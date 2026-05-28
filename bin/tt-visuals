@@ -1,0 +1,286 @@
+#!/usr/bin/env zsh
+# bin/tt-visuals — generate hero / inline / gif / social-crop assets for one
+# Tiny Trauma essay or short. M1 ships --dry-run only.
+
+set -u
+script_path=${0:A}
+SCRIPT_DIR="${script_path:h}"
+REPO_ROOT="${SCRIPT_DIR:h}"
+export REPO_ROOT  # install-winner.zsh's hero-mp4 / inline-gif branches need this
+
+source "$SCRIPT_DIR/lib/tt-visuals/parse-mdx.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/slot-detect.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/draft.zsh"
+
+usage() {
+  cat <<'EOF'
+tt-visuals — generate visuals for a Tiny Trauma post.
+
+Usage:
+  tt-visuals <type/slug> [flags]
+
+Required:
+  <type/slug>                 e.g. musings/the-kettle  or  shorts/the-list
+
+Flags:
+  --engine NAME               codex|gemini|devin|all (default: all). `claude` rejected.
+  --slots LIST                comma-separated: hero,inline,social,gif (default: hero,inline,social)
+  --only-missing              default; --force overrides
+  --force                     re-render even slots already installed
+  --draft-engine NAME         claude|gemini|codex (default: claude)
+  --no-draft                  skip drafter, load existing .prompts.json
+  --dry-run                   write .prompts.json, no API calls
+  --no-install                render + pick, skip mdx rewrite + file install
+  --keep-candidates           don't prune losers after install
+  --max-parallel N            override TT_VISUAL_MAX_PARALLEL
+  -h, --help                  show this help
+EOF
+}
+
+# ---- parse flags ------------------------------------------------------------
+
+typeset target=""
+typeset engine="all"
+typeset slots_csv="hero,inline,social"
+typeset draft_engine="claude"
+typeset -i dry_run=0 no_draft=0 no_install=0 only_missing=1 force=0 keep_cand=0 help=0
+# Note: --force, --only-missing, --keep-candidates are parsed here but
+# consumed by the M2 render path. Safe no-ops under --dry-run.
+typeset max_parallel="${TT_VISUAL_MAX_PARALLEL:-4}"
+
+while (( $# > 0 )); do
+  case "$1" in
+    --engine)         engine="$2"; shift 2 ;;
+    --engine=*)       engine="${1#--engine=}"; shift ;;
+    --slots)          slots_csv="$2"; shift 2 ;;
+    --slots=*)        slots_csv="${1#--slots=}"; shift ;;
+    --draft-engine)   draft_engine="$2"; shift 2 ;;
+    --draft-engine=*) draft_engine="${1#--draft-engine=}"; shift ;;
+    --dry-run)        dry_run=1; shift ;;
+    --no-draft)       no_draft=1; shift ;;
+    --no-install)     no_install=1; shift ;;
+    --only-missing)   only_missing=1; shift ;;
+    --force)          force=1; only_missing=0; shift ;;
+    --keep-candidates) keep_cand=1; shift ;;
+    --max-parallel)   max_parallel="$2"; shift 2 ;;
+    -h|--help)        help=1; shift ;;
+    --)               shift; break ;;
+    -*)               print -ru2 -- "error: unknown flag: $1"; exit 2 ;;
+    *)
+      if [[ -z "$target" ]]; then target="$1"
+      else print -ru2 -- "error: unexpected positional: $1"; exit 2
+      fi
+      shift ;;
+  esac
+done
+
+(( help )) && { usage; exit 0; }
+if [[ -z "$target" ]]; then
+  print -ru2 -- "error: target required (e.g. musings/the-kettle)"
+  usage
+  exit 2
+fi
+
+# Reject --engine claude — claude has no image gen.
+if [[ "$engine" == "claude" ]]; then
+  print -ru2 -- "error: --engine claude is invalid (no image generation capability). Use --draft-engine claude instead."
+  exit 2
+fi
+
+# Validate target shape.
+case "$target" in
+  musings/*|shorts/*) ;;
+  *) print -ru2 -- "error: target must be musings/<slug> or shorts/<slug>"; exit 2 ;;
+esac
+
+typeset type="${target%%/*}"
+typeset slug="${target##*/}"
+
+# Resolve paths (overridable for tests via TT_CONTENT_ROOT, TT_SKILL_DIR).
+typeset CONTENT_ROOT="${TT_CONTENT_ROOT:-$REPO_ROOT}"
+typeset mdx_path="$CONTENT_ROOT/content/$target.mdx"
+typeset asset_dir="$CONTENT_ROOT/public/img/$type/$slug"
+
+if [[ ! -f "$mdx_path" ]]; then
+  print -ru2 -- "error: mdx not found: $mdx_path"
+  exit 2
+fi
+
+mkdir -p "$asset_dir"
+
+# ---- detect slots -----------------------------------------------------------
+
+typeset -a slot_lines
+slot_lines=()
+while IFS= read -r line; do
+  slot_lines+=("$line")
+done < <(tt_detect_slots "$mdx_path")
+
+# Build slot name list for drafter. Every slot the renderer needs to fill
+# must be asked of the drafter — even slots with override text, because the
+# override only replaces `prompt`, not the surrounding payload (negative,
+# aspect, tint). merge-overrides.mjs overlays the override text afterwards.
+typeset -a need_draft
+need_draft=()
+for line in "${slot_lines[@]}"; do
+  case "$line" in
+    hero:empty|hero:override:*)               need_draft+=("hero") ;;
+    hero-mp4:empty|hero-mp4:override:*)       need_draft+=("hero") ;;   # mp4 hero still needs a prompt
+    inline-*:empty|inline-*:override:*)       need_draft+=("${line%%:*}") ;;
+    inline-*:gif:empty|inline-*:gif:override:*) need_draft+=("${line%%:*}") ;;
+  esac
+done
+
+# ---- drafter ----------------------------------------------------------------
+
+typeset prompts_json_path="$asset_dir/.prompts.json"
+typeset drafter_out=""
+
+if (( no_draft )); then
+  if [[ ! -f "$prompts_json_path" ]]; then
+    print -ru2 -- "error: --no-draft passed but $prompts_json_path does not exist"
+    exit 2
+  fi
+  drafter_out=$(cat "$prompts_json_path")
+else
+  # Resolve drafter binary.
+  typeset draft_bin
+  case "$draft_engine" in
+    claude)  draft_bin="${TT_DRAFT_ENGINE_BIN:-claude}" ;;
+    gemini)  draft_bin="gemini" ;;
+    codex)   draft_bin="codex" ;;
+    *) print -ru2 -- "error: unsupported --draft-engine: $draft_engine"; exit 2 ;;
+  esac
+  TT_DRAFT_ENGINE_BIN="$draft_bin" export TT_DRAFT_ENGINE_BIN
+
+  typeset slots_json
+  slots_json=$(printf '%s\n' "${need_draft[@]}" | node -e '
+    let lines = ""; process.stdin.on("data",c=>lines+=c);
+    process.stdin.on("end",()=>{
+      const arr = lines.split("\n").filter(Boolean);
+      process.stdout.write(JSON.stringify(arr));
+    });
+  ')
+
+  drafter_out=$(tt_run_drafter "$mdx_path" "$slots_json") || exit $?
+fi
+
+# Merge inline overrides into drafter_out via a small node helper.
+# Skipped under --no-draft so an author-edited .overrides block is preserved verbatim.
+if (( ! no_draft )); then
+  typeset slot_lines_file=$(mktemp -t tt-slot-lines-XXXXXX)
+  typeset drafter_out_file=$(mktemp -t tt-drafter-out-XXXXXX)
+  printf '%s\n' "${slot_lines[@]}" > "$slot_lines_file"
+  printf '%s' "$drafter_out" > "$drafter_out_file"
+  drafter_out=$(node "$SCRIPT_DIR/lib/tt-visuals/merge-overrides.mjs" "$drafter_out_file" "$slot_lines_file")
+  rm -f "$slot_lines_file" "$drafter_out_file"
+fi
+
+# Enrich the prompts JSON with per-slot kind hints based on the marker
+# grammar. gif → inline kind=video; hero-mp4 → hero.kind=video. Renderer
+# uses this to dispatch TT_VISUAL_KIND=video and pick a .mp4 extension.
+typeset slot_lines_kh_file=$(mktemp -t tt-slot-lines-kh-XXXXXX)
+typeset drafter_out_kh_file=$(mktemp -t tt-drafter-out-kh-XXXXXX)
+printf '%s\n' "${slot_lines[@]}" > "$slot_lines_kh_file"
+printf '%s' "$drafter_out" > "$drafter_out_kh_file"
+drafter_out=$(node "$SCRIPT_DIR/lib/tt-visuals/enrich-kind-hints.mjs" \
+  "$drafter_out_kh_file" "$slot_lines_kh_file")
+rm -f "$slot_lines_kh_file" "$drafter_out_kh_file"
+
+print -r -- "$drafter_out" > "$prompts_json_path"
+
+# ---- dry-run exit -----------------------------------------------------------
+
+if (( dry_run )); then
+  print -r -- "[dry-run] wrote $prompts_json_path"
+  print -r -- "[dry-run] slots: ${(j:, :)slot_lines[@]}"
+  exit 0
+fi
+
+# ---- source M2 libraries ---------------------------------------------------
+source "$SCRIPT_DIR/lib/tt-visuals/render.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/pick-ui.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/install-winner.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/rewrite-mdx.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/social-crops.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/parallel.zsh"
+source "$SCRIPT_DIR/lib/tt-visuals/orchestrate.zsh"
+
+# ---- choose engines ---------------------------------------------------------
+typeset -a engines
+if [[ "$engine" == "all" ]]; then
+  engines=(gemini codex devin)
+else
+  engines=("$engine")
+fi
+
+# Probe availability — skip missing.
+typeset -a live_engines
+live_engines=()
+for e in "${engines[@]}"; do
+  if command -v "$e" >/dev/null 2>&1; then
+    live_engines+=("$e")
+  else
+    print -ru2 -- "tt-visuals: skipping $e (CLI not on PATH)"
+  fi
+done
+
+if (( ${#live_engines[@]} == 0 )); then
+  print -ru2 -- "error: no engines available"
+  exit 3
+fi
+
+# ---- render → pick → install (extracted to orchestrate.zsh) ----------------
+typeset cand_root="/tmp/tt-visuals-${slug}-$$"
+mkdir -p "$cand_root"
+TT_VISUAL_MAX_PARALLEL="$max_parallel" export TT_VISUAL_MAX_PARALLEL
+typeset picks_json_file=$(mktemp -t tt-picks-XXXXXX.json)
+tt_render_pick_install \
+  "${live_engines[*]}" "$prompts_json_path" "$cand_root" \
+  "$asset_dir" "$force" "$picks_json_file"
+typeset -i orch_rc=$?
+case "$orch_rc" in
+  0) ;;
+  6) exit 6 ;;
+  *) exit "$orch_rc" ;;
+esac
+
+# ---- build installed.json for the rewriter ---------------------------------
+typeset installed_json=$(mktemp -t tt-installed-XXXXXX.json)
+node "$SCRIPT_DIR/lib/tt-visuals/build-installed.mjs" \
+  "$type" "$slug" "$picks_json_file" "$cand_root" "$installed_json" \
+  || { print -ru2 -- "tt-visuals: build-installed failed"; exit 5; }
+
+# Read picks count from the JSON to decide whether to rewrite the mdx.
+typeset -i picks_count
+picks_count=$(node -e '
+  const j = JSON.parse(require("fs").readFileSync(process.argv[1], "utf8"));
+  process.stdout.write(String(Object.keys(j).length));
+' "$picks_json_file")
+rm -f "$picks_json_file"
+
+# ---- rewrite mdx atomically -------------------------------------------------
+if (( ! no_install )) && (( picks_count > 0 )); then
+  tt_rewrite_mdx "$mdx_path" "$installed_json" "$REPO_ROOT" || exit 5
+fi
+
+# ---- social crops -----------------------------------------------------------
+if [[ -f "$asset_dir/hero.png" ]] && [[ ",${slots_csv}," == *",social,"* ]]; then
+  tt_make_social_crops "$asset_dir/hero.png" "$asset_dir" \
+    || print -ru2 -- "tt-visuals: social-crops failed (non-fatal)"
+fi
+
+# ---- prune losers unless --keep-candidates ---------------------------------
+(( keep_cand )) || rm -rf "$asset_dir/.candidates"
+
+# ---- commit hint ------------------------------------------------------------
+rm -rf "$cand_root"
+rm -f "$installed_json"
+print -r -- ""
+print -r -- "✓ visuals installed for $target"
+print -r -- ""
+print -r -- "Commit hint:"
+print -r -- "  git add content/${target}.mdx public/img/${type}/${slug}/"
+print -r -- "  git commit -m 'visuals: ${slug}'"
+print -r -- "  git push"
+exit 0

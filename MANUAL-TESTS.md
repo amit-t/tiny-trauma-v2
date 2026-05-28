@@ -589,3 +589,36 @@ hardcodes the paths and bundles the Tiny-Trauma analysis template.
   catalog file's frontmatter; report so the skill prompt gets tightened.
 - **Wrong handle in extracted posts** — Chrome is logged into a different
   Instagram account. Switch profiles.
+
+---
+
+## tt-visuals (M2 — single-engine path)
+
+Prereq: `GEMINI_API_KEY` exported, or `gcloud auth` valid. Pick a real
+draft post with no `heroImage` set.
+
+- [ ] `tt-visuals --dry-run musings/<slug>` writes `public/img/musings/<slug>/.prompts.json` and exits 0
+- [ ] `tt-visuals --engine gemini musings/<slug>` renders, opens Preview, accepts choice `1`
+- [ ] Choosing `s` for hero leaves frontmatter `heroImage` unset
+- [ ] Choosing `q` mid-flow exits 6 with no mdx mutation
+- [ ] After a successful install: `pnpm content` builds without errors
+- [ ] Re-running (`tt-visuals musings/<slug>`) skips already-installed slots
+- [ ] `tt-visuals --force musings/<slug>` re-renders and backs up the old `hero.png` to `hero.bak-<ts>.png`
+- [ ] Social crops exist: `public/img/musings/<slug>/social-{1x1,4x5,16x9}.png`
+
+## tt-visuals (M3 — parallel + GIF/mp4 + retry-edit)
+
+Prereq: at least two of `GEMINI_API_KEY`, `OPENAI_API_KEY` exported, plus
+a `devin` session active (or skip devin and verify the "engine missing"
+path triggers). Use a fresh draft post for each scenario.
+
+- [ ] `tt-visuals musings/<slug>` (no `--engine`) runs all three engines in parallel; Preview shows up to three candidates per slot
+- [ ] Choosing `1` for hero installs the gemini one; mdx `heroImage` points at `/img/musings/<slug>/hero.png`
+- [ ] Choosing `r` for a slot opens `$EDITOR` on the current prompt; saving the edited prompt re-renders only that slot across the same engines
+- [ ] Two consecutive `r` picks on the same slot do NOT infinite-loop (second `r` is treated as skip)
+- [ ] Post with `[[visual gif: …]]` marker writes `inline-N.gif` + `inline-N.mp4` under `public/img/musings/<slug>/`; the mdx body now uses `<video src="…inline-N.gif" autoplay loop muted playsinline aria-label="…"></video>` for that slot (explicit close tag, lowercase HTML attrs)
+- [ ] Post with `[[visual hero mp4: …]]` writes `hero-cover.mp4` + `hero.png` (poster frame); frontmatter `heroImage` points at the still
+- [ ] `pnpm content` builds cleanly after both gif and mp4 hero installs
+- [ ] If `OPENAI_API_KEY` is missing, the codex engine is skipped without aborting the run (stderr: `tt-visuals: skipping codex (CLI not on PATH)`)
+- [ ] `TT_VISUAL_MAX_PARALLEL=1 tt-visuals musings/<slug>` runs slot×engine pairs strictly serially (no parallelism); pick UI still works
+- [ ] `tt.vis.codex musings/<slug>` (alias) runs only the codex engine

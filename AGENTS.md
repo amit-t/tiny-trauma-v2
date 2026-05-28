@@ -22,6 +22,7 @@ Skills currently mirrored:
 - `tiny-trauma-content` — essay / short / brainstorm / cross-post flows
 - `tt-currently` — update the homepage "currently" footer block
 - `tt-instagram-ingest` — refresh the Instagram saves catalog
+- `tt-visuals` — image / GIF / social-crop generator for published posts
 - `grill-me` — stress-test plans and designs via interview
 
 Local CLI wrappers for the first three live in `bin/tt-*` and dispatch
