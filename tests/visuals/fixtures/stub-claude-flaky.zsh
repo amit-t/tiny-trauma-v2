@@ -6,16 +6,20 @@
 # The counter file path is taken from $TT_FLAKY_COUNTER (set by the test),
 # defaulting to $TMPDIR/tt-flaky-counter for safety.
 #
-# Invocation contract: stub-flaky-claude.zsh -p <prompt-file>
+# Invocation contract (matches real claude CLI):
+#   claude -p < <prompt-file>
 
 set -u
-prompt_file=""
+
+# Discard the `-p` / `--print` flag if present.
 while (( $# > 0 )); do
   case "$1" in
-    -p) prompt_file="$2"; shift 2 ;;
-    *)  shift ;;
+    -p|--print) shift ;;
+    *)          shift ;;
   esac
 done
+
+prompt=$(cat)
 
 counter_file="${TT_FLAKY_COUNTER:-${TMPDIR:-/tmp}/tt-flaky-counter}"
 typeset -i n=0
@@ -30,7 +34,7 @@ if (( n == 1 )); then
 fi
 
 # Second call onwards: emit valid JSON matching the slot list.
-slots_json=$(grep '^SLOTS_JSON: ' "$prompt_file" | head -1 | sed 's/^SLOTS_JSON: //')
+slots_json=$(print -r -- "$prompt" | grep '^SLOTS_JSON: ' | head -1 | sed 's/^SLOTS_JSON: //')
 node -e '
 const slots = JSON.parse(process.argv[1] || "[]");
 const out = { hero: null, inline: [] };
