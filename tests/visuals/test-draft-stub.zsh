@@ -48,6 +48,20 @@ assert_eq "2" "$n"
 rm -f "$counter_file"
 unset TT_FLAKY_COUNTER
 
+tt_test "draft strips prose preamble/postscript from real-CLI-style output"
+TT_DRAFT_ENGINE_BIN="$FIXTURES/stub-claude-prosey.zsh"
+export TT_DRAFT_ENGINE_BIN
+slots='["hero","inline-1"]'
+result=$(tt_run_drafter "$FIXTURES/sample-musing.mdx" "$slots")
+rc=$?
+assert_eq "0" "$rc"
+# Result must parse as strict JSON (no prose), and must NOT contain the
+# "Operating under" preamble or the "Note:" postscript.
+parsed=$(printf '%s' "$result" | node -e 'let d=""; process.stdin.on("data",c=>d+=c); process.stdin.on("end",()=>{try{const j=JSON.parse(d); process.stdout.write("ok")}catch(_){process.stdout.write("fail")}})')
+assert_eq "ok" "$parsed"
+assert_not_contains "$result" "Operating under"
+assert_not_contains "$result" "Note:"
+
 # Restore default stub for any future tests in this file.
 TT_DRAFT_ENGINE_BIN="$FIXTURES/stub-claude.zsh"
 export TT_DRAFT_ENGINE_BIN

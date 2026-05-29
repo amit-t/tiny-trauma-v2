@@ -9,7 +9,8 @@
 typeset -g _TT_DRAFT_SOURCED=1
 
 # Usage: tt_run_drafter <mdx-path> <slots-json>
-# Echoes drafter JSON to stdout. Returns 0 on success, 4 on validate fail.
+# Echoes normalized drafter JSON (prose stripped) to stdout. Returns 0 on
+# success, 4 on validate fail after retries.
 tt_run_drafter() {
   local mdx_path="$1" slots_json="$2"
   local drafter_bin="${TT_DRAFT_ENGINE_BIN:-claude}"
@@ -31,13 +32,17 @@ tt_run_drafter() {
     print -r -- "SLOTS_JSON: $slots_json"
   } > "$prompt_file"
 
+  # claude / codex / gemini CLIs use `-p`/`--print` as a NON-INTERACTIVE flag
+  # (not "prompt-file"). The prompt itself is read from stdin. Piping from
+  # the file avoids shell-quoting issues with large prompts.
   local -i attempt=0
-  local raw
+  local raw normalized
   while (( attempt < 2 )); do
-    raw=$("$drafter_bin" -p "$prompt_file" 2>/dev/null)
-    if tt__validate_draft_json "$raw" "$slots_json"; then
+    raw=$("$drafter_bin" -p < "$prompt_file" 2>/dev/null)
+    normalized=$(tt__normalize_and_validate_draft_json "$raw" "$slots_json")
+    if [[ -n "$normalized" ]]; then
       rm -f "$prompt_file"
-      print -r -- "$raw"
+      print -r -- "$normalized"
       return 0
     fi
     (( attempt++ ))
@@ -48,7 +53,12 @@ tt_run_drafter() {
   return 4
 }
 
-# Internal: validate that $1 parses as JSON and matches the slot list $2.
+# Internal: extract + validate the drafter JSON.
+#
+# Real drafter CLIs (claude, gemini, codex) often wrap the JSON in prose
+# preamble / postscript despite the prompt's strict-JSON instruction.
+# Strategy: try strict JSON.parse first; on failure, brace-match the first
+# top-level `{...}` substring and parse that. Acceptance criteria stay strict.
 #
 # Strict checks:
 #   - shape: { hero: object|null, inline: array }
@@ -56,13 +66,43 @@ tt_run_drafter() {
 #   - if "hero" NOT in $slots_json → j.hero must be null (non-null = reject)
 #   - every j.inline[].slot must appear in $slots_json
 #   - every requested inline slot must appear exactly once in j.inline
-tt__validate_draft_json() {
+#
+# On success: prints the extracted+canonicalized JSON to stdout (caller writes
+# THIS, not the raw prose-wrapped response, to `.prompts.json`).
+# On failure: prints nothing.
+tt__normalize_and_validate_draft_json() {
   local raw="$1" slots_json="$2"
   node -e '
     const raw = process.argv[1];
     const slots = JSON.parse(process.argv[2]);
+    function extractFirstJsonObject(s) {
+      let depth = 0, start = -1, inStr = false, esc = false;
+      for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (inStr) {
+          if (esc) { esc = false; continue; }
+          if (c === "\\") { esc = true; continue; }
+          if (c === "\"") inStr = false;
+          continue;
+        }
+        if (c === "\"") { inStr = true; continue; }
+        if (c === "{") { if (depth === 0) start = i; depth++; continue; }
+        if (c === "}") {
+          depth--;
+          if (depth === 0 && start >= 0) return s.slice(start, i + 1);
+        }
+      }
+      return null;
+    }
+    let j, normalized;
     try {
-      const j = JSON.parse(raw);
+      try { j = JSON.parse(raw); normalized = raw; }
+      catch (_) {
+        const obj = extractFirstJsonObject(raw);
+        if (!obj) process.exit(1);
+        j = JSON.parse(obj);
+        normalized = obj;
+      }
       if (!("hero" in j) || !("inline" in j)) process.exit(1);
       if (!Array.isArray(j.inline)) process.exit(1);
       const wantHero = slots.includes("hero");
@@ -82,7 +122,17 @@ tt__validate_draft_json() {
       for (const s of wantInline) {
         if (!sawInline.has(s)) process.exit(1);
       }
+      // Print the canonicalised JSON (re-serialised for clean shape).
+      process.stdout.write(JSON.stringify(j));
       process.exit(0);
     } catch (_) { process.exit(1); }
   ' "$raw" "$slots_json" 2>/dev/null
+}
+
+# Backwards-compat shim: old name returns 0/1 based on whether normalize
+# succeeded. Kept so existing tests that call the old name don't break.
+tt__validate_draft_json() {
+  local out
+  out=$(tt__normalize_and_validate_draft_json "$1" "$2")
+  [[ -n "$out" ]]
 }

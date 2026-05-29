@@ -1,23 +1,26 @@
 #!/usr/bin/env zsh
 # tests/visuals/fixtures/stub-claude.zsh — fake `claude` binary for unit
-# tests of the drafter. Reads the slot list from the prompt context and
-# emits valid drafter JSON.
+# tests of the drafter. Reads the prompt from STDIN (matches real claude
+# CLI semantics: `-p`/`--print` is a flag, prompt arrives via stdin or as
+# a positional arg) and emits valid drafter JSON.
 #
-# Invocation contract (matches what drafter.zsh will call):
-#   stub-claude.zsh -p <prompt-file>
-# Prints JSON to stdout. Slot list is detected by scanning the prompt
-# file for the line "SLOTS_JSON: <json>".
+# Invocation contract (matches what draft.zsh calls):
+#   claude -p < <prompt-file>
+# Prints JSON to stdout. Slot list is detected by scanning the stdin
+# content for the line "SLOTS_JSON: <json>".
 
 set -u
-prompt_file=""
+
+# Discard the `-p` / `--print` flag if present; real claude accepts it.
 while (( $# > 0 )); do
   case "$1" in
-    -p) prompt_file="$2"; shift 2 ;;
-    *)  shift ;;
+    -p|--print) shift ;;
+    *)          shift ;;
   esac
 done
 
-slots_json=$(grep '^SLOTS_JSON: ' "$prompt_file" | head -1 | sed 's/^SLOTS_JSON: //')
+prompt=$(cat)
+slots_json=$(print -r -- "$prompt" | grep '^SLOTS_JSON: ' | head -1 | sed 's/^SLOTS_JSON: //')
 
 # Emit a minimal valid response based on the slot list.
 node -e '
