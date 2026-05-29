@@ -59,3 +59,5 @@ next-env.d.ts
 /.playwright-profile/
 # playwright MCP per-session artifacts (page snapshots, console logs)
 /.playwright-mcp/
+
+/.claude/handoffs/
