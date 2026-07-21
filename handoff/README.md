@@ -1,40 +1,48 @@
 # Tiny Trauma — v2 handoff
 
-This folder is everything Claude Code needs to build the v2 app from the v3 design.
+This folder is the design-phase bundle Claude Code used to build the v2 app.
+
+> **Status.** The site has since become a **fully static export** hosted on
+> here.now, and the newsletter moved to **Substack**. The database, the auth
+> layer, the admin dashboard and every API route are gone. The phase prompts,
+> `ROADMAP.md` and `QUICKSTART.md` are kept as a record of how the project was
+> originally built — they describe a stack that no longer exists. For current
+> reality, read [`ARCHITECTURE.md`](./ARCHITECTURE.md), [`DEPLOY.md`](./DEPLOY.md)
+> and the root [`README.md`](../README.md).
 
 ## What this is
 
 **Two pieces:**
 
-1. **A small reading website** (`tinytrauma.in`) — public essays + short
-   fictions + a working newsletter. Deployed to DigitalOcean.
+1. **A small reading website** (`tinytrauma.com`) — public essays and short
+   fictions, plus a link to the newsletter. A static site, published to
+   here.now.
 2. **A local writing studio** — runs entirely on your laptop inside Claude
    Code via the `tiny-trauma-content` skill. Brainstorms with you, drafts
    essays in voice, outputs ready-to-commit MDX files.
 
-Content flows: **brainstorm locally → MDX file → git commit → git push →
-DigitalOcean rebuilds → essay is live.**
+Content flows: **brainstorm locally → MDX file → git commit → git push → CI
+rebuilds the static site → essay is live.**
 
-This split is intentional. The website itself is small, cheap, and has no
-secrets beyond a DB. All the AI heavy-lifting happens locally in your
-existing Claude Code workflow, so the deployed app stays simple and your
+This split is intentional. The website has no server, no database and no
+secrets at all. All the AI heavy-lifting happens locally in your existing
+Claude Code workflow, so the deployed site stays a directory of files and your
 Anthropic costs stay local.
 
 ## Two stacks, clearly separated
 
 **Website (deployed):**
-- **Next.js 15** (app router) + **TypeScript** + **React 19**
+- **Next.js 16** (app router, `output: "export"`) + **TypeScript** + **React 19**
 - **Tailwind v4** (CSS-first config; tokens in `design/styles-v3.css`)
-- **Postgres** — local **Docker** for dev, **DigitalOcean Managed Postgres**
-  for prod. Stores: subscribers, campaigns, subscribe_events. **Not posts.**
-- **Drizzle ORM** + **drizzle-kit**
-- **Better Auth** (single owner; email magic-link)
-- **Resend** for transactional + newsletter sends, **react-email** for templates
-- **MDX** for content — `@next/mdx`, with custom remark plugins for the
-  handwritten / pullquote / aside marks
-- **DigitalOcean App Platform** deploy
-- **GitHub Actions** for scheduled crons (newsletter send)
-- **Plausible** (optional, phase 6) for public analytics
+- **No database.** Nothing is stored at runtime, because there is no runtime.
+- **Velite** compiles the MDX in `content/` at build time, with custom remark
+  plugins for the handwritten / pullquote / aside marks
+- **Substack** hosts the newsletter; the site links out to it
+- **here.now** static hosting, republished on push to `main`
+- **Plausible** (optional) for public analytics
+
+Retired with the move to static: Postgres, Drizzle, Better Auth, Resend,
+react-email, DigitalOcean App Platform and the GitHub Actions send cron.
 
 **Studio (local-only, Claude Code skill):**
 - A `.claude/skills/tiny-trauma-content/` skill folder
@@ -71,10 +79,10 @@ handoff/
 ├── QUICKSTART.md              ← human-facing 3-min setup
 ├── CLAUDE.md                  ← agent rules, voice, conventions
 ├── ARCHITECTURE.md            ← stack, data model, routing, key flows
-├── ROADMAP.md                 ← six phases, what each delivers
+├── ROADMAP.md                 ← six build phases (historical)
 ├── DESIGN-SYSTEM.md           ← tokens, type, components, voice rules
 ├── CONTENT-MODEL.md           ← MDX schema, frontmatter, custom marks
-├── DEPLOY.md                  ← DigitalOcean deployment guide
+├── DEPLOY.md                  ← static export + here.now deployment
 ├── design/                    ← static reference — do not modify
 │   ├── styles-v3.css
 │   ├── index.html, musings.html, musing.html
@@ -103,8 +111,8 @@ Optimise for "Sunday morning, coffee in hand, write the essay, hit send, done."
 
 Read `DESIGN-SYSTEM.md`. Tiny Trauma's tone is dry, slightly literary,
 lowercase-first, italics for emphasis (never bold), and the handwritten font
-is for the writer's margin asides only. The admin UI inherits the same voice
-— empty states say things like *"no drafts. probably for the best."* not
+is for the writer's margin asides only. Every empty state inherits the same
+voice — they say things like *"no drafts. probably for the best."* not
 *"You don't have any drafts yet!"*
 
 The voice is part of the product. Microcopy reviews are a real PR.

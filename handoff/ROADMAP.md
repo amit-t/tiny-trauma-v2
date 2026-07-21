@@ -1,3 +1,10 @@
+> **Historical.** This file records how the project was originally built:
+> Next.js in standalone mode, Postgres, Better Auth, Resend and a DigitalOcean
+> deploy. The site is now a fully static export published to here.now, with the
+> newsletter on Substack, and none of that stack remains. Kept as a record of
+> the build. For current reality see `ARCHITECTURE.md`, `DEPLOY.md` and the root
+> `README.md`.
+
 # ROADMAP.md — six phases
 
 Each phase is a Claude Code session. Stop after each, verify, then move on.

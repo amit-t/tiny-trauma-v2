@@ -124,27 +124,21 @@ Lowercase, hyphens for spaces, no other punctuation. The skill enforces this.
 ## Drafts
 
 - `status: draft` files don't render publicly and don't show in `/musings` or
-  `/shorts` lists.
-- They DO appear in `/admin/posts` for the owner to see.
+  `/shorts` lists, the sitemap, or the RSS feed.
 - They DO appear in dev mode (`NODE_ENV !== "production"`) on the public list
   with a "DRAFT" pill, so you can preview before committing.
+- A draft still gets a page generated at its URL in the static build, but that
+  page renders the 404 view rather than the essay.
 
-## Newsletter campaigns
+## The newsletter
 
-A campaign is built from a published MDX file. The flow:
+The list lives on Substack, and letters are composed there. Nothing in this
+repo builds, stores or sends email.
 
-1. In `/admin/campaigns/new`, owner picks a published MDX file from a dropdown.
-2. Server reads the file, parses frontmatter, snapshots the body into
-   `campaigns.bodySnapshot` (so editing the MDX later doesn't change a sent
-   campaign).
-3. Pre-fills: `subject = title with *italics* stripped`,
-   `preheader = dek (first 90 chars)`.
-4. Owner can add a `personalNote` (italic, appears at top of email).
-5. Final email template:
-   - Renders in `react-email` Newsreader fallback (Plex Mono is unreliable
-     in mail clients).
-   - Coral accent on links, italic emphasis, pullquotes as bordered blocks.
-   - Footer with one-click unsubscribe (required).
+An MDX file is therefore only ever a web page. There is no campaign record, no
+body snapshot, and no link between a post and a sent letter — the earlier
+`/admin/campaigns` flow and its Postgres tables were removed when the site
+became a static export.
 
 ## Cross-post copy (out of the app)
 

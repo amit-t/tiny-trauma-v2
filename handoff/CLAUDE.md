@@ -4,8 +4,8 @@ Rules for the Claude Code agent working in this repo. Read this before every ses
 
 ## Who you're building for
 
-One person. The owner of the blog. The admin user IS the writer. There is no
-team, no editor, no moderator. Optimise every flow for one tired person at 11pm
+One person. The owner of the blog, who is also the only writer. There is no
+team, no editor, no moderator, and no admin interface. Optimise every flow for one tired person at 11pm
 on a Sunday wanting to ship one essay.
 
 ## Voice (the product has one — match it in code, copy, errors, comments)
@@ -21,15 +21,14 @@ on a Sunday wanting to ship one essay.
 - **Microcopy examples** that pass the smell test:
   - Empty drafts: *"no drafts. probably for the best."*
   - 404: *"this page does not exist, and probably never did."*
-  - Subscribe success: *"you're on the list. I'll be in touch on sunday."*
-  - Form error: *"that doesn't look like a full email address yet."*
+  - Subscribe CTA: *"subscribe on substack →"* (a link — there is no form)
   - AI generating: *"thinking…"* (italic, accent color, slow pulse) — not "Loading..."
 
 ## Design
 
 `design/styles-v3.css` contains the final tokens. `design/*.html` files are visual
 ground truth. The Next.js app MUST match these pixel-for-pixel on the public
-pages. The admin extends the same system; don't introduce a second design language.
+pages. Don't introduce a second design language anywhere.
 
 When in doubt about a component, open the matching HTML file and copy the styles.
 The design has already been reviewed and approved.
@@ -39,9 +38,16 @@ The design has already been reviewed and approved.
 - **TypeScript strict mode.** `any` requires a comment explaining why.
 - **No `useEffect` for data fetching.** Use React Server Components by default;
   reach for client components only when there's interactivity that needs it.
-- **Server actions for mutations** — no API routes unless there's a third party
-  calling them (webhooks, RSS, etc.).
-- **Drizzle, not Prisma.** Schema in `db/schema.ts`. Migrations via `drizzle-kit`.
+- **No server code at all.** The site is a static export (`output: "export"`).
+  Server actions, middleware, request-reading route handlers and dynamic
+  rendering are unavailable — the build fails if you add one. Route handlers
+  are allowed only as `GET` + `dynamic = "force-static"`, which is how
+  `feed.xml` works.
+- **No database.** Content comes from MDX in `content/`, read through
+  `lib/posts.ts`. Anything that needs storage belongs to a third party the
+  site links out to, not to this repo.
+- **Site-wide constants live in `lib/site.ts`** — canonical URL, contact
+  address, Substack URL. Do not inline them in components.
 - **Tailwind v4 CSS-first config**. Put tokens in `app/globals.css` under
   `@theme { ... }`. Component styles via class-variance-authority where it makes sense.
 - **shadcn-style components** in `components/ui/`. Generate them with the CLI, then
@@ -73,35 +79,33 @@ The design has already been reviewed and approved.
 ## Forbidden
 
 - No `ANTHROPIC_API_KEY` in the app, no Anthropic SDK, no server-side AI calls.
-  The app is content + email; AI lives in the local Claude Code skill.
+  The site is static content; AI lives in the local Claude Code skill.
 - No drop shadows (one exception: modals).
 - No emoji in product UI.
 - No "we" voice anywhere — it's a personal blog, "I" only.
 - No third typeface. Fraunces + IBM Plex Mono + Caveat.
 - No icon libraries for nav or CTAs. Type does the work.
 - No multi-tenant patterns. No "organizations", no roles, no permissions matrices.
-- No fake content during admin development. Use the seeded MDX files from
-  `/content/` so the visuals stay honest.
+- No fake content. Use the real MDX files in `content/` so the visuals stay
+  honest.
 - No `prefers-color-scheme` defaults. Dark is canonical. Light is opt-in via toggle.
-- No in-app post editor / tiptap / autosave / revisions — writing happens in
-  the local skill, the deployed admin only views MDX, never edits it.
+- No in-app post editor / tiptap / autosave / revisions, and no admin UI at
+  all — writing happens in the local skill and ships as a git commit.
 
 ## Secrets
 
-`.env.local.example` lives at the repo root after phase 0. Fill it in via the
-DigitalOcean App Platform dashboard in production, never commit `.env.local`.
-Required:
+**There are none, and there is nowhere to put one.** The site is a static
+export: everything the build can read is inlined into public HTML, and there
+is no server to hold a key at runtime.
+
+`.env.local.example` at the repo root lists the single optional variable:
 
 ```
-DATABASE_URL=postgresql://tt:tt@localhost:5432/tinytrauma   # dev: docker compose
-BETTER_AUTH_SECRET=...          # generate via `openssl rand -base64 32`
-BETTER_AUTH_URL=http://localhost:3000
-RESEND_API_KEY=...
-RESEND_FROM=hi@tinytrauma.in    # verify domain in Resend first
-RESEND_WEBHOOK_SECRET=...       # from Resend webhook config
-OWNER_EMAIL=...                 # the email that gets owner access on signup
-CRON_SECRET=...                 # `openssl rand -base64 32`; auth for cron POSTs
+PLAUSIBLE_DOMAIN=               # e.g. tinytrauma.com; empty omits the script
 ```
+
+If you find yourself wanting a secret, the feature needs a server, and this
+site does not have one. Say so instead of adding it.
 
 **There is no `ANTHROPIC_API_KEY`.** This app does not call Anthropic from
 the server. All AI happens locally in the `tiny-trauma-content` Claude Code

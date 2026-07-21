@@ -4,228 +4,192 @@
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│  LOCAL ONLY — your laptop, inside Claude Code                       │
+│  LOCAL ONLY — your laptop, inside Claude Code                        │
 │                                                                      │
-│   ┌─────────────────────────┐                                       │
-│   │ tiny-trauma-content     │  brainstorms, drafts, edits           │
-│   │ skill (Claude Code)     │  (uses your Claude Code subscription) │
-│   └────────────┬────────────┘                                       │
+│   ┌─────────────────────────┐                                        │
+│   │ tiny-trauma-content     │  brainstorms, drafts, edits            │
+│   │ skill + bin/tt-* CLIs   │  (uses your Claude Code subscription)  │
+│   └────────────┬────────────┘                                        │
 │                │ outputs                                             │
 │                ▼                                                     │
-│   ┌─────────────────────────┐                                       │
-│   │ content/musings/*.mdx   │  ← committed to git                   │
-│   │ content/shorts/*.mdx    │                                       │
-│   └────────────┬────────────┘                                       │
-└────────────────┼────────────────────────────────────────────────────┘
-                 │ git push
+│   ┌─────────────────────────┐                                        │
+│   │ content/musings/*.mdx   │  ← committed to git                    │
+│   │ content/shorts/*.mdx    │    (the source of truth)               │
+│   └────────────┬────────────┘                                        │
+└────────────────┼─────────────────────────────────────────────────────┘
+                 │ git push to main
                  ▼
 ┌──────────────────────────────────────────────────────────────────────┐
-│  DEPLOYED — DigitalOcean                                            │
+│  BUILD — CI                                                          │
 │                                                                      │
-│   ┌─────────────────────────────────┐                               │
-│   │   Public site (Next.js, RSC)    │  reads MDX from /content      │
-│   │   /  /musings  /shorts  /about  │  rebuild on git push          │
-│   │   /newsletter  /[type]/[slug]   │                               │
-│   └────────────┬────────────────────┘                               │
-│                │ reads/writes                                        │
-│                ▼                                                     │
-│   ┌─────────────────────────────────┐                               │
-│   │   DO Managed Postgres           │  subscribers · campaigns ·    │
-│   │                                 │  subscribe_events             │
-│   └─────────────────────────────────┘                               │
-│                ▲                                                     │
-│                │ uses                                                │
-│   ┌────────────┴────────────────────┐                               │
-│   │   /admin (Better Auth, owner)   │  manage subscribers,          │
-│   │                                 │  build & schedule campaigns   │
-│   └────────────┬────────────────────┘                               │
-│                │ sends via                                           │
-│                ▼                                                     │
-│         ┌─────────────┐                                              │
-│         │   Resend    │                                              │
-│         └─────────────┘                                              │
+│   velite  →  validates frontmatter, compiles MDX bodies to HTML      │
+│      │                                                               │
+│      ▼                                                               │
+│   next build (output: "export")                                      │
+│      │                                                               │
+│      ▼                                                               │
+│   out/  —  every page rendered to HTML, once, here                   │
+└────────────────┬─────────────────────────────────────────────────────┘
+                 │ upload
+                 ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│  DEPLOYED — here.now                                                 │
+│                                                                      │
+│   A directory of static files behind a CDN.                          │
+│   No server. No database. No runtime. Nothing to break at 3 a.m.     │
 └──────────────────────────────────────────────────────────────────────┘
+
+           the newsletter lives entirely outside this diagram,
+           on Substack. The site links to it; that is the whole
+           integration.
 ```
 
-**No Anthropic API calls from the deployed server.** All AI is local.
+**No API calls of any kind from the deployed site.** All AI is local, at
+authoring time.
 
 ## Routes
 
-### Public (cached, ISR, fast)
+Every route below is rendered to a file at build time. There are no dynamic
+routes, no route handlers that read the request, no server actions and no
+middleware — a static export supports none of them.
 
-| Path                  | What                                    |
-|-----------------------|-----------------------------------------|
-| `/`                   | Home — hero + recent musings + featured short + newsletter band |
-| `/musings`            | List of all essays, year-grouped, filterable |
-| `/musings/[slug]`     | Essay detail — reading view             |
-| `/shorts`             | List of all short fictions              |
-| `/shorts/[slug]`      | Short fiction detail                    |
-| `/about`              | About page                              |
-| `/newsletter`         | Subscribe + FAQ + past letters          |
-| `/feed.xml`           | RSS                                     |
-| `/sitemap.xml`        | Sitemap                                 |
-| `/robots.txt`         | Robots                                  |
-| `/api/subscribe`      | POST endpoint (email + tier)            |
-| `/api/unsubscribe`    | GET with token from email footer        |
-| `/api/webhooks/resend`| Bounce/complaint handling               |
-| `/api/cron/send-campaigns` | POST, bearer-token-auth, hourly via GitHub Actions |
+| Path                | Output                      | What                                                     |
+|---------------------|-----------------------------|----------------------------------------------------------|
+| `/`                 | `out/index.html`            | Home — hero, recent musings, featured short, subscribe band |
+| `/musings/`         | `out/musings/index.html`    | All essays, year-grouped                                  |
+| `/musings/<slug>/`  | one file per post           | Essay reading view                                        |
+| `/shorts/`          | `out/shorts/index.html`     | All short fictions                                        |
+| `/shorts/<slug>/`   | one file per post           | Short fiction reading view                                |
+| `/about/`           | `out/about/index.html`      | About page                                                |
+| `/newsletter/`      | `out/newsletter/index.html` | What the letter is, FAQ, recent essays, Substack link     |
+| `/design/`          | `out/design/index.html`     | Design-system showcase (linked in the nav only in dev)    |
+| `/feed.xml`         | `out/feed.xml`              | RSS — published posts only                                |
+| `/sitemap.xml`      | `out/sitemap.xml`           | Sitemap — published posts only                            |
+| `/robots.txt`       | `out/robots.txt`            | Robots                                                    |
+| `/icon`, `/apple-icon` | PNG                      | Favicons, drawn with `next/og` at build time              |
+| 404                 | `out/404.html`              | Not-found page                                            |
 
-### Admin (`/admin/*`, auth-gated; redirects to login if not owner)
+`trailingSlash: true`, so each page is `<route>/index.html` and any plain file
+server resolves it without rewrite rules.
 
-| Path                          | What                                  |
-|-------------------------------|---------------------------------------|
-| `/admin`                      | Dashboard: counts, last sent          |
-| `/admin/posts`                | Read-only list of MDX files w/ status (a window into `/content`, not an editor) |
-| `/admin/posts/[slug]`         | MDX file viewer — frontmatter on right, rendered body on left, "open in editor" links to your local file (`vscode://file/...`) |
-| `/admin/campaigns`            | Newsletter campaigns list             |
-| `/admin/campaigns/new`        | Build a campaign from a published MDX file |
-| `/admin/campaigns/[id]`       | Edit + schedule + preview             |
-| `/admin/subscribers`          | Subscriber list, search, export       |
-| `/admin/settings`             | Site-level settings, API keys check   |
+Both `[slug]` routes set `dynamicParams = false` and derive their paths from
+`generateStaticParams()`. A static export cannot build a dynamic route that
+generates zero pages, so `content/musings/` and `content/shorts/` must each
+contain at least one post.
 
-### Auth
+### Routes that no longer exist
 
-| Path                  | What                                    |
-|-----------------------|-----------------------------------------|
-| `/sign-in`            | Email magic-link sign-in                |
-| `/api/auth/[...all]`  | Better Auth handler                     |
+Removed when the site went static. They required a server:
+
+- `/api/subscribe`, `/api/unsubscribe`, `/api/webhooks/resend`,
+  `/api/cron/send-campaigns`, `/api/auth/[...all]`
+- `/admin`, `/admin/posts`, `/admin/campaigns`, `/admin/subscribers`,
+  `/admin/settings`, `/admin/brainstorm`, `/admin/cross-post`
+- `/sign-in`, `/sign-in/check-inbox`, `/not-owner`
+- `/subscribe/confirm`, `/unsubscribed`
 
 ## Content model — MDX files
 
-**Posts are not in the database.** They live in `/content/musings/*.mdx` and
-`/content/shorts/*.mdx`. Full schema in `handoff/CONTENT-MODEL.md`.
+**Posts live in git**, at `content/musings/*.mdx` and `content/shorts/*.mdx`.
+Full schema in [`CONTENT-MODEL.md`](./CONTENT-MODEL.md).
 
-The Next.js app uses **Velite** (or **MDX + a small custom loader**) at build
-time to:
-1. Read every `.mdx` file under `/content/`
-2. Validate frontmatter against a Zod schema
-3. Generate a typed manifest (`.velite/posts.json`) the app imports
-4. Hot-reload in dev when files change
+[Velite](https://velite.js.org) runs from `next.config.mjs` before Next
+compiles, and at build time it:
 
-On `git push`, DO App Platform rebuilds; new MDX files appear automatically.
+1. Reads every `.mdx` file under `content/`
+2. Validates frontmatter against a Zod schema (`lib/mdx/post-schema.ts`)
+3. Runs the custom remark plugins — pull-quotes, asides, handwritten marks
+4. Emits a typed manifest into `.velite/`, imported as `#site/content`
+5. Hot-reloads in dev when files change
 
-## Data model — Postgres (Drizzle schema)
+`lib/posts.ts` is the only module that reads that manifest. It sorts, filters
+drafts, and exposes the small helpers the pages use.
 
-Only three tables. Posts are NOT here.
+Drafts (`status: draft`) render in `pnpm dev` and are excluded from the
+production build, the sitemap and the feed.
 
-```ts
-// db/schema.ts
-import { pgTable, text, timestamp, varchar, integer, boolean, uuid } from "drizzle-orm/pg-core";
+## Data model
 
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  name: varchar("name", { length: 120 }),
-  isOwner: boolean("is_owner").notNull().default(false),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+None. There is no database.
 
-export const subscribers = pgTable("subscribers", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  firstName: varchar("first_name", { length: 120 }),
-  tier: text("tier", { enum: ["weekly", "monthly", "both"] }).notNull().default("weekly"),
-  status: text("status", { enum: ["pending", "active", "unsubscribed", "bounced"] }).notNull().default("pending"),
-  unsubscribeToken: varchar("unsubscribe_token", { length: 64 }).notNull(),
-  source: text("source"),
-  subscribedAt: timestamp("subscribed_at").notNull().defaultNow(),
-  confirmedAt: timestamp("confirmed_at"),
-  unsubscribedAt: timestamp("unsubscribed_at"),
-});
+The retired stack ran Postgres via Drizzle with four tables — `users`,
+`subscribers`, `campaigns` and `subscribe_events` — behind Better Auth and
+Resend. All of it was deleted when the newsletter moved to Substack: the
+schema, the migrations, the client, the mailer and the admin UI that drove it.
 
-export const campaigns = pgTable("campaigns", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  postSlug: varchar("post_slug", { length: 200 }),   // links to an MDX file
-  postType: text("post_type", { enum: ["musing", "short"] }),
-  subject: text("subject").notNull(),
-  preheader: text("preheader"),
-  personalNote: text("personal_note"),
-  bodySnapshot: text("body_snapshot").notNull(),   // copy of MDX body at the moment of campaign creation; preserved even if post is later edited
-  segment: text("segment", { enum: ["weekly", "monthly", "both", "all"] }).notNull().default("weekly"),
-  status: text("status", { enum: ["draft", "scheduled", "sending", "sent", "failed"] }).notNull().default("draft"),
-  scheduledFor: timestamp("scheduled_for"),
-  sentAt: timestamp("sent_at"),
-  sentCount: integer("sent_count").notNull().default(0),
-  openCount: integer("open_count").notNull().default(0),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+Substack owns the subscriber list now. This repo stores nothing about readers,
+and has no way to.
 
-export const subscribeEvents = pgTable("subscribe_events", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  subscriberId: uuid("subscriber_id").references(() => subscribers.id, { onDelete: "cascade" }),
-  campaignId: uuid("campaign_id").references(() => campaigns.id, { onDelete: "cascade" }),
-  type: text("type", { enum: ["sent", "opened", "clicked", "bounced", "complained"] }).notNull(),
-  at: timestamp("at").notNull().defaultNow(),
-});
-```
+## Configuration
+
+`lib/site.ts` holds the values that change independently of markup: the
+canonical URL, site name and description, the contact address, and the
+Substack URL. Metadata, sitemap, robots and the RSS feed all read from it.
+
+The build reads one optional environment variable, `PLAUSIBLE_DOMAIN`, inlined
+at build time. There are no secrets — everything the build can see ends up in
+public HTML.
 
 ## Key flows
 
-### Publish an essay (the writing flow)
+### Publish an essay
 
-1. Owner invokes `tiny-trauma-content` skill in Claude Code locally.
-2. Skill runs a grill-me session: theme, what they noticed this week, tone,
-   length. Drafts the essay in voice. Edits with the user.
-3. Skill writes `content/musings/<slug>.mdx` with full frontmatter.
-4. Owner reviews the file (in editor), tweaks if needed.
-5. `git add content/musings/<slug>.mdx && git commit -m "essay: <title>" && git push`
-6. DO App Platform autodeploys (~2 min). New essay appears on `/musings/<slug>`,
-   `/feed.xml`, `/sitemap.xml`.
+1. Owner invokes the `tiny-trauma-content` skill in Claude Code locally.
+2. The skill runs a grill-me session — theme, what they noticed this week,
+   tone, length — then drafts in voice and edits with the user.
+3. It writes `content/musings/<slug>.mdx` with full frontmatter.
+4. Owner reviews the file and tweaks it.
+5. `git commit && git push` to `main`.
+6. CI rebuilds and republishes. The essay appears on `/musings/<slug>/`, in
+   `/feed.xml` and in `/sitemap.xml`.
 
-### Send a campaign
+There is no publish button and no admin UI. The commit *is* the publish.
 
-1. Admin opens `/admin/campaigns/new`, picks a published MDX file.
-2. Server reads the MDX, snapshots body into `campaigns.bodySnapshot`,
-   pre-fills subject (title without italics), preheader (dek).
-3. Owner edits subject/preheader, adds an optional personal note.
-4. Preview renders live as a real email (react-email iframe simulation).
-5. "Send test to me" → sends to owner only.
-6. "Schedule" → set `scheduledFor`. GitHub Actions cron hits
-   `/api/cron/send-campaigns` hourly, picks up due campaigns, batches via
-   Resend, records `subscribe_events` rows.
+### Subscribe
 
-### Subscribe (public)
+The reader clicks a subscribe link and lands on Substack. That is the entire
+flow. Nothing is stored here, no email is sent from here, and there is no
+endpoint to POST to.
 
-1. POST `/api/subscribe` with `{ email, firstName?, tier, source }`.
-2. Insert row with `status="pending"`, generate `unsubscribeToken`.
-3. Send double-opt-in email via Resend.
-4. Confirm link: `/api/subscribe/confirm?token=...` → `status="active"`.
-5. Welcome email — short, in-voice, links to top 3 essays (read from MDX).
+The old flow — double opt-in through `/api/subscribe`, a confirmation token,
+a Resend email, a `pending → active` transition in Postgres — is gone.
 
-## Cron jobs (GitHub Actions)
+### Send a letter
 
-DO App Platform has no native cron. We use GitHub Actions scheduled workflows
-that `curl` cron endpoints with a bearer token.
+Done from Substack's own composer, outside this repo.
 
-- `cron-send-campaigns` — hourly. Hits `/api/cron/send-campaigns`.
-- No `cron-publish` needed (publishing is `git push`, not a scheduled job).
+The old flow — snapshot a published MDX body into a campaign row, edit subject
+and preheader in `/admin/campaigns`, schedule it, let a GitHub Actions cron hit
+`/api/cron/send-campaigns` and batch through Resend, then record opens and
+bounces via a Resend webhook — no longer exists.
 
-YAML in `handoff/DEPLOY.md`.
+## Cron jobs
+
+None. Publishing is a `git push`, and sending is Substack's problem.
 
 ## Caching & revalidation
 
-- All public list/detail routes statically generated at build time from MDX.
-- On `git push` → new build → fresh static pages.
-- Admin routes are `force-dynamic`.
-- Static assets (fonts) cached aggressively.
-- Next.js standalone output (`next.config.mjs` → `output: "standalone"`) for
-  DO App Platform.
+Nothing to revalidate. Every page is generated at build time and served as a
+file; the only way content changes is a new build. `output: "export"` in
+`next.config.mjs` is what makes that true.
 
 ## Environments
 
-- **Local**: `pnpm dev` against a local Postgres in **Docker**. MDX hot-reloads
-  on file save.
-- **Production**: **DigitalOcean App Platform** deploying from `main` on every
-  push. **DigitalOcean Managed Postgres** for the DB. Domain `tinytrauma.in`
-  via DO Domains; HTTPS via Let's Encrypt (automatic).
+- **Local**: `pnpm dev`. No database, no Docker, no env file needed. MDX
+  hot-reloads on save.
+- **Production**: `out/`, published to here.now on push to `main`. See
+  [`DEPLOY.md`](./DEPLOY.md).
 
-## Out of scope for v1
+## Out of scope
 
 - Multi-author / teams / roles
 - Comments (replies are by email, on purpose)
-- Search (≤ 100 posts; year-grouped list is enough)
+- Search (≤ 100 posts; the year-grouped list is enough)
 - In-app AI (use the local skill instead)
-- Direct social posting (the skill can generate cross-post copy locally; you paste)
-- Paid subscriptions / Stripe
+- Direct social posting (the skill generates cross-post copy locally; you paste)
+- Paid subscriptions
 - Mobile app
 - i18n
+
+Anything needing a server is also out of scope by construction now — adding it
+back means leaving the static export.

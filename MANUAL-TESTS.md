@@ -7,6 +7,13 @@ the owner still has to run, organised by phase.
 When you finish a check, tick the box. When a phase is fully verified, the
 section can stay as a record.
 
+> **Post-migration note.** The site is now a fully static export with the
+> newsletter on Substack. Auth, the admin dashboard, the subscriber database
+> and email sending no longer exist, so the checks that exercised them can no
+> longer be run — those sections are marked **OBSOLETE** and kept as a record
+> of what was once verified. The replacement checks live in
+> "Static export · post-migration" at the bottom of this file.
+
 ---
 
 ## Phase 0 · Bootstrap
@@ -43,6 +50,8 @@ section can stay as a record.
 ---
 
 ## Phase 3 · Auth + admin shell
+
+> **OBSOLETE — nothing to test.** Magic-link auth, `/sign-in` and every `/admin` route were removed when the site went static.
 
 Prereq: fill real values in `.env.local` (the dev placeholders that ship
 with the agent will not send mail):
@@ -99,6 +108,8 @@ Then:
 ---
 
 ## Phase 5 · Newsletter
+
+> **OBSOLETE — nothing to test.** The subscribe endpoint, double opt-in, campaigns, the send cron and the Resend webhook were all removed. The newsletter is on Substack; the site only links to it.
 
 Prereq:
 
@@ -176,6 +187,8 @@ Cron in production (full automation lands in phase 6 / deploy):
 
 ### Local Postgres bring-up (one-time)
 
+> **OBSOLETE — nothing to test.** There is no database. `pnpm dev` needs no Docker, no Postgres and no env file.
+
 The phase-6 cutover moved auth + app data from sqlite to Postgres via
 Drizzle. To run the app locally now:
 
@@ -193,6 +206,8 @@ Drizzle. To run the app locally now:
       parity confidence.
 
 ### Admin polish review (in voice)
+
+> **OBSOLETE — nothing to test.** There is no admin UI.
 
 Click through every admin route and confirm the copy reads in voice:
 
@@ -622,3 +637,54 @@ path triggers). Use a fresh draft post for each scenario.
 - [ ] If `OPENAI_API_KEY` is missing, the codex engine is skipped without aborting the run (stderr: `tt-visuals: skipping codex (CLI not on PATH)`)
 - [ ] `TT_VISUAL_MAX_PARALLEL=1 tt-visuals musings/<slug>` runs slot×engine pairs strictly serially (no parallelism); pick UI still works
 - [ ] `tt.vis.codex musings/<slug>` (alias) runs only the codex engine
+
+---
+
+## Static export · post-migration
+
+Checks that replace the retired auth / admin / newsletter suites. Run against
+a built copy: `pnpm build && pnpm preview` (serves `out/` on :3000).
+
+### The build produces a real site
+
+- [ ] `pnpm build` exits 0 and prints a route table with no `f (Dynamic)` rows.
+- [ ] `out/index.html` exists and is not empty.
+- [ ] `find out -name index.html | wc -l` matches the number of pages you
+      expect (one per static route, plus one per published post, plus 404).
+- [ ] Every post in `content/` has a directory under `out/musings/` or
+      `out/shorts/`.
+
+### Nothing secret escaped
+
+Everything in `out/` becomes public the moment it is published.
+
+- [ ] `find out \( -name '.env*' -o -name node_modules \)` returns nothing.
+- [ ] `grep -rIl -E 'postgres://|_SECRET|_API_KEY|-----BEGIN' out` returns
+      nothing.
+
+### The subscribe path
+
+- [ ] Home, `/about/` and `/newsletter/` each show a "subscribe on substack"
+      link — not an email input.
+- [ ] Each link points at the Substack URL and carries
+      `rel="noopener noreferrer"`.
+- [ ] `grep -rl '<form' out` returns nothing. There is no form to submit and
+      no endpoint to submit to.
+- [ ] `grep -rl '/api/' out` returns nothing.
+- [ ] Clicking a subscribe link lands on the live Substack subscribe page.
+
+### Content and feeds
+
+- [ ] `/musings/` and `/shorts/` list the published posts; open one of each
+      and confirm the prose, marginalia and prev/next links render.
+- [ ] A `status: draft` post is absent from the lists, from `out/sitemap.xml`
+      and from `out/feed.xml`, and its own URL renders the 404 view.
+- [ ] URLs inside `out/feed.xml`, `out/sitemap.xml` and `out/robots.txt` all
+      use the live domain.
+- [ ] `/feed.xml` validates in a feed reader.
+
+### Rendering
+
+- [ ] Fonts load; the theme toggle switches light/dark and persists.
+- [ ] The browser console is clean on the home page and on one essay.
+- [ ] Nav links work from a served copy — every internal link ends in `/`.
