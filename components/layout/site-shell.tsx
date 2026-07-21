@@ -2,6 +2,7 @@ import { Nav, type NavLink } from "@/components/ui/nav";
 import { ColophonFooter } from "@/components/ui/colophon-footer";
 import currentlyData from "@/data/currently.json";
 import { renderInline } from "@/lib/render-prose";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 type CurrentlyData = {
   reading: string;
@@ -15,7 +16,7 @@ const ELSEWHERE = [
   { label: "twitter", href: "#" },
   { label: "instagram", href: "#" },
   { label: "rss", href: "/feed.xml" },
-  { label: "hi@tinytrauma.in", href: "mailto:hi@tinytrauma.in" },
+  { label: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}` },
 ];
 
 export function SiteShell({

@@ -5,7 +5,7 @@ import { DraftPill } from "@/components/ui/draft-pill";
 import { FilterPill } from "@/components/ui/filter-pill";
 import { HandInline } from "@/components/ui/hand-inline";
 import { SiteShell } from "@/components/layout/site-shell";
-import { SubscribeForm } from "@/components/subscribe-form";
+import { SubscribeLink } from "@/components/subscribe-link";
 import {
   cardTintFromHero,
   getPublishedMusings,
@@ -187,7 +187,7 @@ export default function Home() {
             threads, no tips, no productivity. I read every reply.
           </p>
         </div>
-        <SubscribeForm variant="band" source="home" />
+        <SubscribeLink variant="band" />
       </section>
     </SiteShell>
   );

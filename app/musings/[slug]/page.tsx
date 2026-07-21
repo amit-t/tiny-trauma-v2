@@ -9,6 +9,8 @@ import { padNum, stripMarkers } from "@/lib/format";
 
 import type { Metadata } from "next";
 
+export const dynamicParams = false;
+
 export async function generateStaticParams() {
   return getAllMusings().map((m) => ({ slug: m.slug }));
 }

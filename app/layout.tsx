@@ -1,30 +1,30 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { body, display, hand } from "@/lib/fonts";
-import { env } from "@/lib/env";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
-const DESCRIPTION =
-  "A personal blog about the small daily friction between who you are and everything around you. Honest, slightly literary, sometimes funny, occasionally devastating, never a wellness tip.";
+// Read at build time and inlined into the static output.
+const PLAUSIBLE_DOMAIN = process.env.PLAUSIBLE_DOMAIN;
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://tinytrauma.in"),
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Tiny Trauma — daily friction, mostly",
-    template: "%s — Tiny Trauma",
+    default: SITE_TITLE,
+    template: `%s — ${SITE_NAME}`,
   },
-  description: DESCRIPTION,
+  description: SITE_DESCRIPTION,
   openGraph: {
-    title: "Tiny Trauma — daily friction, mostly",
-    description: DESCRIPTION,
-    siteName: "Tiny Trauma",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    siteName: SITE_NAME,
     type: "website",
     locale: "en_IN",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Tiny Trauma",
-    description: DESCRIPTION,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
   },
   alternates: { types: { "application/rss+xml": "/feed.xml" } },
 };
@@ -40,10 +40,10 @@ export default function RootLayout({
     >
       <body>
         {children}
-        {env.PLAUSIBLE_DOMAIN ? (
+        {PLAUSIBLE_DOMAIN ? (
           <Script
             strategy="afterInteractive"
-            data-domain={env.PLAUSIBLE_DOMAIN}
+            data-domain={PLAUSIBLE_DOMAIN}
             src="https://plausible.io/js/script.js"
           />
         ) : null}

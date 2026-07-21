@@ -11,6 +11,7 @@ import { Marginalia } from "@/components/ui/marginalia";
 import { Nav } from "@/components/ui/nav";
 import { PullQuote } from "@/components/ui/pull-quote";
 import { Wordmark } from "@/components/ui/wordmark";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 const CHIP_TINTS: ChipTint[] = ["lavender", "sage", "butter", "peach", "slate"];
 const ART_TINTS = ["default", "lavender", "sage", "butter", "peach", "slate"] as const;
@@ -282,7 +283,7 @@ export default function DesignShowcase() {
             { label: "twitter", href: "#" },
             { label: "instagram", href: "#" },
             { label: "rss", href: "#" },
-            { label: "hi@tinytrauma.in", href: "mailto:hi@tinytrauma.in" },
+            { label: CONTACT_EMAIL, href: `mailto:${CONTACT_EMAIL}` },
           ]}
           base={
             <>

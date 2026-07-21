@@ -1,15 +1,12 @@
 import Link from "next/link";
 import { HandInline } from "@/components/ui/hand-inline";
 import { SiteShell } from "@/components/layout/site-shell";
-import { SubscribeForm } from "@/components/subscribe-form";
-import { listSentCampaigns } from "@/lib/campaigns";
-import { findMusing, findShort } from "@/lib/posts";
+import { SubscribeLink } from "@/components/subscribe-link";
+import { getPublishedMusings } from "@/lib/posts";
 import { renderInline } from "@/lib/render-prose";
 import { padNum, stripMarkers } from "@/lib/format";
 
 import type { Metadata } from "next";
-
-export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "Newsletter",
@@ -17,41 +14,8 @@ export const metadata: Metadata = {
     "One short essay, in your inbox, most Sundays. Sometimes a short fiction on the side. No threads, no tips.",
 };
 
-type PastEntry = {
-  key: string;
-  number: number;
-  date: string;
-  href: string;
-  title: string;
-  summary: string;
-  stat: string;
-};
-
-/**
- * Past letters come from the real campaigns table. The UI shows a friendly
- * empty state until the first one ships.
- */
-async function loadPastLetters(): Promise<PastEntry[]> {
-  const sent = await listSentCampaigns();
-  if (sent.length === 0) return [];
-  return sent.map((c) => {
-    const post = c.postType === "musing" ? findMusing(c.postSlug) : findShort(c.postSlug);
-    const path = c.postType === "musing" ? "musings" : "shorts";
-    return {
-      key: c.id,
-      number: post?.number ?? 0,
-      date: formatShortDate(c.sentAt ?? c.createdAt),
-      href: `/${path}/${c.postSlug}`,
-      title: post?.title ?? c.subject,
-      summary: post?.dek ?? c.preheader,
-      stat:
-        c.openCount > 0 ? `${c.openCount.toLocaleString()} opens` : `${c.sentCount} sent`,
-    };
-  });
-}
-
-function formatShortDate(ms: number): string {
-  return new Date(ms)
+function formatShortDate(iso: string): string {
+  return new Date(iso)
     .toLocaleDateString("en-US", { month: "short", day: "2-digit" })
     .toLowerCase();
 }
@@ -90,8 +54,8 @@ const FAQ = [
     ),
     a: (
       <>
-        I put it in a quiet self-hosted list, send you the essay, and never give it to
-        anyone else. No analytics pixels. No referral programs. No third-party anything.
+        The list lives on Substack, which sends you the essay and nothing else. I never
+        sell it, trade it, or hand it to anyone. No referral programs, no growth hacks.
         Unsubscribe is one click and works the first time.
       </>
     ),
@@ -145,7 +109,7 @@ export default function NewsletterPage() {
             even the angry ones, especially the angry ones.
           </p>
         </div>
-        <SubscribeForm variant="card" source="newsletter" />
+        <SubscribeLink variant="card" />
       </section>
 
       <section className="what">
@@ -269,7 +233,7 @@ export default function NewsletterPage() {
             padding: "0 16px",
           }}
         >
-          <SubscribeForm variant="mini" source="footer" />
+          <SubscribeLink variant="mini" />
         </div>
         <p style={{ color: "var(--ink-3)", fontSize: 12.5, marginTop: 12 }}>
           no spam · unsubscribe in one click · I read every reply.
@@ -279,8 +243,14 @@ export default function NewsletterPage() {
   );
 }
 
-async function PastList() {
-  const items = await loadPastLetters();
+/**
+ * The essays themselves are the archive. Send statistics used to come from
+ * the campaigns table; the list now lives on Substack, so this shows the
+ * most recent published essays instead of per-letter open counts.
+ */
+function PastList() {
+  const items = getPublishedMusings().slice(0, 6);
+
   if (items.length === 0) {
     return (
       <p
@@ -292,23 +262,24 @@ async function PastList() {
       </p>
     );
   }
+
   return (
     <div className="past-list">
       {items.map((p) => (
-        <article key={p.key} className="past-item">
+        <article key={p.slug} className="past-item">
           <div className="when">
             <span className="num">№ {padNum(p.number)}</span>
-            {p.date}
+            {formatShortDate(p.publishedAt)}
           </div>
           <div>
             <h4>
-              <Link href={p.href} title={stripMarkers(p.summary)}>
+              <Link href={`/musings/${p.slug}`} title={stripMarkers(p.dek)}>
                 {renderInline(p.title)}
               </Link>
             </h4>
-            <p className="summary">{renderInline(p.summary)}</p>
+            <p className="summary">{renderInline(p.dek)}</p>
           </div>
-          <div className="stat">{p.stat}</div>
+          <div className="stat">{p.readingTimeMinutes} min read</div>
         </article>
       ))}
     </div>

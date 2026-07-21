@@ -366,6 +366,19 @@ button {
   color: var(--accent);
 }
 
+/* Subscribe call-to-action. The newsletter lives on Substack, so every
+   subscribe affordance is a link, not a form. */
+.subscribe-link {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.subscribe-link .small {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  margin: 0;
+}
+
 /* ============================================================
    Inputs
    ============================================================ */
@@ -1347,19 +1360,10 @@ button {
   margin-top: 14px;
   max-width: 36ch;
 }
-.newsletter-band form {
+.newsletter-band .subscribe-link {
   display: grid;
   gap: 12px;
-}
-.newsletter-band .row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-@media (max-width: 600px) {
-  .newsletter-band .row {
-    grid-template-columns: 1fr;
-  }
+  justify-items: start;
 }
 .newsletter-band .small {
   color: var(--ink-3);
@@ -2631,43 +2635,10 @@ button {
   margin-top: 18px;
   max-width: 36ch;
 }
-.subscribe-card form {
+.subscribe-card .subscribe-link {
   display: grid;
   gap: 12px;
-}
-.subscribe-card .row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-@media (max-width: 600px) {
-  .subscribe-card .row {
-    grid-template-columns: 1fr;
-  }
-}
-.subscribe-card .tiers {
-  display: flex;
-  gap: 8px;
-  margin-top: 4px;
-  flex-wrap: wrap;
-}
-.subscribe-card .tier-pick {
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 6px 12px;
-  color: var(--ink-2);
-  font-size: 12.5px;
-  cursor: pointer;
-  transition: all var(--dur-1) var(--ease);
-}
-.subscribe-card .tier-pick.on {
-  background: var(--ink);
-  color: var(--bg);
-  border-color: var(--ink);
-}
-.subscribe-card .tier-pick:hover {
-  color: var(--ink);
-  border-color: var(--ink-3);
+  justify-items: start;
 }
 .subscribe-card .small {
   color: var(--ink-3);

@@ -14,7 +14,17 @@ if (!process.env.VELITE_STARTED && (isDev || isBuild)) {
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "standalone",
+  // Fully static site: `next build` writes HTML/CSS/JS to `out/` and no
+  // Node.js server is involved. There are no request-reading route
+  // handlers, no server actions, and no middleware.
+  output: "export",
+
+  // Emit `/musings/slug/index.html` rather than `/musings/slug.html`, so a
+  // plain file server resolves every route without rewrite rules.
+  trailingSlash: true,
+
+  // No image optimisation server exists in a static export.
+  images: { unoptimized: true },
 };
 
 export default nextConfig;

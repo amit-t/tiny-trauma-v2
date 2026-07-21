@@ -1,10 +1,12 @@
 import type { MetadataRoute } from "next";
 
-const SITE = "https://tinytrauma.in";
+import { SITE_URL as SITE } from "@/lib/site";
+
+export const dynamic = "force-static";
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [{ userAgent: "*", allow: "/", disallow: "/admin/" }],
+    rules: [{ userAgent: "*", allow: "/" }],
     sitemap: `${SITE}/sitemap.xml`,
   };
 }

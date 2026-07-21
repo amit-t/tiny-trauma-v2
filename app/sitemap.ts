@@ -1,7 +1,9 @@
 import type { MetadataRoute } from "next";
 import { getAllMusings, getAllShorts } from "@/lib/posts";
 
-const SITE = "https://tinytrauma.in";
+import { SITE_URL as SITE } from "@/lib/site";
+
+export const dynamic = "force-static";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();

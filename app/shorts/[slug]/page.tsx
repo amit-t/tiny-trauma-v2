@@ -7,6 +7,8 @@ import { padNum, stripMarkers } from "@/lib/format";
 
 import type { Metadata } from "next";
 
+export const dynamicParams = false;
+
 export async function generateStaticParams() {
   return getAllShorts().map((s) => ({ slug: s.slug }));
 }

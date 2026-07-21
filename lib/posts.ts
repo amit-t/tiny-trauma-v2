@@ -48,15 +48,6 @@ export function findShort(slug: string) {
   return allShortsRaw.find((s) => s.slug === slug);
 }
 
-/** Used by the admin posts viewer. */
-export function getAllPostsForAdmin() {
-  const tagged = [
-    ...allMusingsRaw.map((m) => ({ ...m, type: "musing" as const })),
-    ...allShortsRaw.map((s) => ({ ...s, type: "short" as const })),
-  ];
-  return sortNewestFirst(tagged);
-}
-
 /** Map a tag string to one of the chip tints. */
 export function tagToTint(tag: string): ChipTint {
   switch (tag) {

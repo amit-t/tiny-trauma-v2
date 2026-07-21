@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { HandInline } from "@/components/ui/hand-inline";
 import { SiteShell } from "@/components/layout/site-shell";
-import { SubscribeForm } from "@/components/subscribe-form";
+import { SubscribeLink } from "@/components/subscribe-link";
+import { CONTACT_EMAIL } from "@/lib/site";
 
 import type { Metadata } from "next";
 
@@ -128,7 +129,7 @@ export default function AboutPage() {
               one short essay every sunday, sometimes a short fiction on the side. no
               threads. no tips.
             </p>
-            <SubscribeForm variant="side" source="about" />
+            <SubscribeLink variant="side" />
           </div>
         </aside>
       </div>
@@ -162,7 +163,7 @@ export default function AboutPage() {
           Write back, <em>if you want.</em>
         </h2>
         <p className="email">
-          <a href="mailto:hi@tinytrauma.in">hi@tinytrauma.in</a>
+          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
         </p>
         <span className="hand">I read every email. I reply to most.</span>
       </section>

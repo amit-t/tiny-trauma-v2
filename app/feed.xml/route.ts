@@ -1,10 +1,11 @@
 import { getPublishedForFeeds } from "@/lib/posts";
 import { stripMarkers } from "@/lib/format";
 
-const SITE = "https://tinytrauma.in";
+import { SITE_DESCRIPTION as DESCRIPTION, SITE_URL as SITE } from "@/lib/site";
+
+export const dynamic = "force-static";
+
 const TITLE = "tiny trauma";
-const DESCRIPTION =
-  "A personal blog about the small daily friction between who you are and everything around you. Honest, slightly literary, sometimes funny, occasionally devastating, never a wellness tip.";
 
 export async function GET() {
   const posts = getPublishedForFeeds();
