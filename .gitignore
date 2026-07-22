@@ -61,3 +61,6 @@ next-env.d.ts
 /.playwright-mcp/
 
 /.claude/handoffs/
+
+# here.now publisher state and claim-token cache
+/.herenow/
