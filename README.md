@@ -59,6 +59,28 @@ contact address. Change them there, not in components.
 Published to **here.now** as a static site, on push to `main`. `out/` is the
 published artifact; nothing else is uploaded and no build runs in production.
 
+### Manual fallback
+
+When GitHub Actions is unavailable, run:
+
+```zsh
+ttdeploy
+```
+
+`ttdeploy` deploys the named branch currently checked out. It does not fetch,
+pull, switch or merge. It refuses detached `HEAD` and any tracked or untracked
+worktree changes.
+
+The command requires active here.now credentials in `~/.herenow/credentials`
+(mode `600`) or `HERENOW_API_KEY`. It installs locked dependencies, builds
+`out/`, scans the export for credential-shaped content, publishes Site
+`whole-geyser-5pbf`, then verifies `tinytrauma.com` and its `www` redirect.
+
+`tt-deploy` is the direct executable equivalent. Run `tt-deploy --help` for the
+short command reference. A non-zero exit before publishing means nothing was
+deployed. A post-publish verification error explicitly says publication
+succeeded but live verification failed.
+
 ## Checks
 
 ```bash
@@ -66,6 +88,7 @@ pnpm typecheck      # tsc --noEmit
 pnpm lint           # eslint
 pnpm test           # vitest — MDX pipeline (remark plugins, schema)
 pnpm test:visuals   # zsh suite for the bin/tt-visuals CLI
+zsh tests/deploy/test-tt-deploy.zsh  # offline manual-deploy contract
 ```
 
 ## Local tooling
