@@ -1,0 +1,199 @@
+#!/usr/bin/env zsh
+
+# Capture script location before defining functions. Inside zsh functions, $0
+# names the function rather than this executable.
+script_path=${0:A}
+repo_dir=${script_path:h:h}
+
+set -euo pipefail
+
+readonly site_slug='whole-geyser-5pbf'
+readonly site_url="https://${site_slug}.here.now/"
+readonly production_url='https://tinytrauma.com/'
+readonly www_url='https://www.tinytrauma.com/'
+readonly output_dir="$repo_dir/out"
+readonly default_publisher="$HOME/.agents/skills/here-now/scripts/publish.sh"
+readonly secret_pattern='(mongodb(\+srv)?://[^ "]*:[^ "]*@|postgres(ql)?://[^ "]*:[^ "]*@|-----BEGIN [A-Z ]*PRIVATE KEY-----)'
+
+typeset -g publish_log=''
+typeset -g apex_file=''
+typeset -g site_file=''
+
+usage() {
+  print -r -- 'Usage: tt-deploy'
+  print -r -- ''
+  print -r -- 'Build and publish the currently checked-out Tiny Trauma branch.'
+  print -r -- 'Requires a clean named Git branch and authenticated here.now credentials.'
+}
+
+die() {
+  print -u2 -r -- "tt-deploy: $*"
+  return 1
+}
+
+die_verification() {
+  print -u2 -r -- "tt-deploy: publish succeeded, but production verification failed: $*"
+  return 1
+}
+
+require_command() {
+  local command_name=$1
+  (( $+commands[$command_name] )) ||
+    die "required command not found: $command_name"
+}
+
+cleanup() {
+  [[ -z "$publish_log" ]] || rm -f -- "$publish_log"
+  [[ -z "$apex_file" ]] || rm -f -- "$apex_file"
+  [[ -z "$site_file" ]] || rm -f -- "$site_file"
+}
+
+credentials_are_safe() {
+  [[ -n "${HERENOW_API_KEY:-}" ]] && return 0
+
+  local credentials_file="$HOME/.herenow/credentials"
+  local permissions=''
+
+  [[ -s "$credentials_file" ]] ||
+    die "authenticated here.now credentials not found at $credentials_file"
+
+  if permissions=$(stat -f '%Lp' "$credentials_file" 2>/dev/null); then
+    :
+  elif permissions=$(stat -c '%a' "$credentials_file" 2>/dev/null); then
+    :
+  else
+    die "could not inspect permissions for $credentials_file"
+  fi
+
+  [[ "$permissions" == <-> ]] ||
+    die "could not parse permissions for $credentials_file"
+  [[ "${permissions[-2,-1]}" == '00' ]] ||
+    die "$credentials_file permissions are $permissions; expected owner-only access (for example, 600)"
+}
+
+verify_statuses() {
+  local apex_code=''
+  local not_found_code=''
+  local www_result=''
+
+  apex_code=$(curl -sS -o /dev/null -w '%{http_code}' "$production_url") ||
+    apex_code='000'
+  not_found_code=$(curl -sS -o /dev/null -w '%{http_code}' "${production_url}404.html") ||
+    not_found_code='000'
+  www_result=$(curl -sS -o /dev/null -w '%{http_code} %{redirect_url}' "$www_url") ||
+    www_result='000 '
+
+  [[ "$apex_code" == '200' ]] ||
+    die_verification "$production_url returned $apex_code, expected 200"
+  [[ "$not_found_code" == '200' ]] ||
+    die_verification "${production_url}404.html returned $not_found_code, expected 200"
+  [[ "$www_result" == "301 $production_url" ]] ||
+    die_verification "$www_url returned '$www_result', expected '301 $production_url'"
+}
+
+main() {
+  if (( $# > 0 )); then
+    case "$1" in
+      -h|--help)
+        (( $# == 1 )) || {
+          usage >&2
+          return 2
+        }
+        usage
+        return 0
+        ;;
+      *)
+        usage >&2
+        return 2
+        ;;
+    esac
+  fi
+
+  local command_name=''
+  for command_name in git pnpm curl cmp find grep mktemp sed stat tee; do
+    require_command "$command_name"
+  done
+
+  local actual_repo=''
+  actual_repo=$(git -C "$repo_dir" rev-parse --show-toplevel 2>/dev/null) ||
+    die "$repo_dir is not a Git repository"
+  [[ "${actual_repo:A}" == "$repo_dir" ]] ||
+    die "script repository mismatch: expected $repo_dir, Git reported $actual_repo"
+
+  local branch=''
+  local commit_sha=''
+  local dirty=''
+  branch=$(git -C "$repo_dir" symbolic-ref --quiet --short HEAD) ||
+    die "detached HEAD cannot be deployed"
+  commit_sha=$(git -C "$repo_dir" rev-parse HEAD) ||
+    die "could not resolve current commit"
+  dirty=$(git -C "$repo_dir" status --porcelain --untracked-files=normal) ||
+    die "could not inspect worktree state"
+  [[ -z "$dirty" ]] ||
+    die "worktree is dirty; commit or remove all tracked and untracked changes before deployment"
+
+  local publisher="${TT_HERENOW_PUBLISHER:-$default_publisher}"
+  [[ -x "$publisher" ]] ||
+    die "here.now publisher is missing or not executable: $publisher"
+  credentials_are_safe
+
+  cd "$repo_dir"
+
+  print -r -- "Installing locked dependencies..."
+  pnpm install --frozen-lockfile ||
+    die "pnpm install --frozen-lockfile failed"
+
+  print -r -- "Building static export..."
+  pnpm build ||
+    die "pnpm build failed"
+
+  [[ -f "$output_dir/index.html" ]] ||
+    die "$output_dir/index.html is missing; build did not produce a static export"
+
+  local file_count=''
+  file_count=$(find "$output_dir" -type f -print | sed -n '$=')
+  [[ -n "$file_count" ]] || file_count=0
+  (( file_count >= 2 )) ||
+    die "$output_dir contains only $file_count file(s); refusing to publish"
+
+  if grep -RIEq --binary-files=without-match "$secret_pattern" "$output_dir"; then
+    die "static export contains a database credential or private key"
+  fi
+
+  publish_log=$(mktemp)
+  apex_file=$(mktemp)
+  site_file=$(mktemp)
+  trap cleanup EXIT
+
+  print -r -- "Publishing branch $branch at $commit_sha..."
+  if "$publisher" out --slug "$site_slug" --client ttdeploy 2>&1 |
+      tee "$publish_log"; then
+    :
+  else
+    die "here.now publisher failed"
+  fi
+
+  grep -Fqx 'publish_result.auth_mode=authenticated' "$publish_log" ||
+    die_verification "publisher did not report authenticated mode"
+  grep -Fqx "publish_result.site_url=$site_url" "$publish_log" ||
+    die_verification "publisher reported an unexpected Site URL"
+
+  print -r -- 'Verifying production domain...'
+  curl -fsS --retry 5 --retry-delay 2 --retry-all-errors "$production_url" -o "$apex_file" ||
+    die_verification "could not download $production_url"
+  curl -fsS --retry 5 --retry-delay 2 --retry-all-errors "$site_url" -o "$site_file" ||
+    die_verification "could not download $site_url"
+  cmp -s "$apex_file" "$site_file" ||
+    die_verification "apex homepage does not match published Site homepage"
+
+  verify_statuses
+
+  print -r -- ''
+  print -r -- 'Deployment verified.'
+  print -r -- "Branch: $branch"
+  print -r -- "Commit: $commit_sha"
+  print -r -- "Site: $site_url"
+  print -r -- "Production: $production_url"
+}
+
+main "$@"
