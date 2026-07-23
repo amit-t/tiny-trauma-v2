@@ -24,6 +24,7 @@ fi
 #   tt-cross-post   — generate Twitter / LinkedIn / Instagram drafts
 #   tt-currently    — update homepage "currently" footer rows
 #   tt-ingest       — refresh Instagram inspirations catalog
+#   tt-deploy       — manually build, publish, and verify current branch
 #
 # Each accepts: --engine claude|codex|gemini|devin (default: claude),
 #               --dry-run, --help, and piped stdin as extra context.
@@ -36,6 +37,9 @@ alias tt.brain='tt-brainstorm'
 alias tt.xpost='tt-cross-post'
 alias tt.now='tt-currently'
 alias tt.ingest='tt-ingest'
+
+# Manual deployment fallback.
+alias ttdeploy='tt-deploy'
 
 # Engine-pinned shortcuts — handy when you've decided to use a specific
 # engine for the whole session and don't want to retype --engine.
