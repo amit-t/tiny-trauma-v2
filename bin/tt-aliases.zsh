@@ -24,10 +24,12 @@ fi
 #   tt-cross-post   — generate Twitter / LinkedIn / Instagram drafts
 #   tt-currently    — update homepage "currently" footer rows
 #   tt-ingest       — refresh Instagram inspirations catalog
-#   tt-deploy       — manually build, publish, and verify current branch
 #
-# Each accepts: --engine claude|codex|gemini|devin (default: claude),
-#               --dry-run, --help, and piped stdin as extra context.
+# Each content CLI accepts: --engine claude|codex|gemini|devin
+# (default: claude), --dry-run, --help, and piped stdin as extra context.
+#
+# Manual deployment:
+#   tt-deploy       — build, publish, and verify current branch; accepts --help
 # -----------------------------------------------------------------------------
 
 # Short aliases (dot-separated namespace, matches existing `tt.sync` style).

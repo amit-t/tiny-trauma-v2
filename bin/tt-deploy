@@ -158,6 +158,10 @@ main() {
 
   if grep -RIEq --binary-files=without-match "$secret_pattern" "$output_dir"; then
     die "static export contains a database credential or private key"
+  else
+    local scan_code=$?
+    (( scan_code == 1 )) ||
+      die "could not scan static export for database credentials and private keys"
   fi
 
   publish_log=$(mktemp)

@@ -142,6 +142,13 @@ print -r -- "publisher $*" >> "$FAKE_CALLS"
 [[ "${FAKE_PUBLISH_FAIL:-0}" == 1 ]] && exit 43
 print -r -- "publish_result.auth_mode=${FAKE_AUTH_MODE:-authenticated}"
 print -r -- "publish_result.site_url=${FAKE_SITE_URL:-https://whole-geyser-5pbf.here.now/}"'
+
+  write_stub grep '#!/usr/bin/env zsh
+if [[ "${FAKE_SCAN_ERROR:-0}" == 1 && "$*" == *"--binary-files=without-match"* ]]; then
+  print -r -- "grep scan error" >> "$FAKE_CALLS"
+  exit 2
+fi
+exec /usr/bin/grep "$@"'
 }
 
 reset_switches() {
@@ -149,6 +156,7 @@ reset_switches() {
   unset FAKE_EMPTY_EXPORT FAKE_SECRET_EXPORT FAKE_PUBLISH_FAIL
   unset FAKE_AUTH_MODE FAKE_SITE_URL FAKE_APEX_MISMATCH
   unset FAKE_APEX_CODE FAKE_404_CODE FAKE_WWW_RESULT
+  unset FAKE_SCAN_ERROR
 }
 
 run_deploy() {
@@ -235,6 +243,14 @@ test_secret_export() {
   assert_not_contains "$(call_log)" "publisher " "secret scan fails before publish"
 }
 
+test_secret_scan_error() {
+  export FAKE_SCAN_ERROR=1
+  run_deploy
+  assert_eq 1 "$RUN_CODE" "secret scanner error fails closed"
+  assert_contains "$RUN_OUTPUT" "could not scan static export" "scanner error is clear"
+  assert_not_contains "$(call_log)" "publisher " "scanner error fails before publish"
+}
+
 test_anonymous_publish() {
   export FAKE_AUTH_MODE=anonymous
   run_deploy
@@ -291,6 +307,7 @@ run_test "install failure" test_install_failure
 run_test "build failure" test_build_failure
 run_test "empty export" test_empty_export
 run_test "secret scan" test_secret_export
+run_test "secret scanner error" test_secret_scan_error
 run_test "anonymous publisher" test_anonymous_publish
 run_test "wrong Site URL" test_wrong_site_url
 run_test "homepage mismatch" test_homepage_mismatch
